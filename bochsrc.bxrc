@@ -1,0 +1,19 @@
+# 内存 单位MB
+megs: 128
+
+# 设置BIOS和VGA BIOS
+romimage: file=D:/programFiles/Bochs/Bochs-2.7/BIOS-bochs-latest, options=fastboot
+vgaromimage: file=D:/programFiles/Bochs/Bochs-2.7/VGABIOS-lgpl-latest
+
+# 硬盘启动
+boot: disk
+
+#日志
+log: bochs.log
+
+#鼠标和键盘
+mouse: enabled=0 
+keyboard: keymap=D:/programFiles/Bochs/Bochs-2.7/keymaps/x11-pc-us.map
+#硬盘设置
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, mode=flat, path="c.img"
