@@ -39,10 +39,10 @@ GDT_P_UNEXIST equ 0x0000
 
 
 ;DPL位，特权级
-GDT_DPL_0 equ 0x0000
-GDT_DPL_1 equ 0x1000
-GDT_DPL_2 equ 0x2000
-GDT_DPL_3 equ 0x3000
+G_DPL_0 equ 0x0000
+G_DPL_1 equ 0x1000
+G_DPL_2 equ 0x2000
+G_DPL_3 equ 0x3000
 
 ;S位 为0为系统段，为1为数据段. 这里的系统其实是指CPU硬件本身所需要的数据结构，而不是软件层面的操作系统, 软件层面的在这里都被当成数据段
 ;需要与type字段联合起来解读实际含义
@@ -71,7 +71,7 @@ GDT_TYPE_DATA_EXTEND_DOWN equ 0x200 ;向下扩展
 GDT_TYPE_DATA_EXTEND_UP equ 0x000 ;向上扩展
 
 
-;同时设置S和TYPE防止弄混
+;同时设置S和TYPE返回弄混
 ;s为1的系统段
 GDT_S_TYPE_LDT equ GDT_TYPE_LDT | GDT_S_SYSTEM
 GDT_S_TYPE_TASK_GATE equ GDT_TYPE_TASK_GATE | GDT_S_SYSTEM
@@ -84,11 +84,5 @@ GDT_S_TYPE_TRAP_GATE equ GDT_TYPE_TRAP_GATE | GDT_S_SYSTEM
 GDT_S_TYPE_CODE equ GDT_TYPE_CODE | GDT_TYPE_DATA
 GDT_S_TYPE_DATA equ GDT_TYPE_DATA | GDT_TYPE_DATA
 
+mov ax,GDT_S_TYPE_CODE 
 
-;定义选择子里的属性
-RPL_0  equ   0x0
-RPL_1  equ   0x1
-RPL_2  equ   0x2
-RPL_3  equ   0x3
-TI_GDT	 equ   0x0
-TI_LDT	 equ   0x4
