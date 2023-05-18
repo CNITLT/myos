@@ -52,6 +52,18 @@ gdt_ptr  dw  GDT_LIMIT
     jmp dword GDT_SELECTOR_CODE:.pe_mode_start
 
 .pe_mode_start:
+    ;刷新其它的选择子
+    mov ax, GDT_SELECTOR_DATA
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp,LOADER_STACK_TOP
+
+    ;创建页表
+    ;虚拟地址3GB往上的1mb全映射到低端1MB，虚拟地址低端1MB映射到物理地址低端1MB
+    
+
     jmp .pe_mode_start
 
     
