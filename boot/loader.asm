@@ -63,6 +63,31 @@ pe_mode_start:
     ;创建页目录和页表
     call setup_kernel_page_dir_and_table
     ;准备开启分页机制
+    ;根据GDTR的地址找GDT的时候，如果开启分页的话，会要经过页表的转化
+    ;将之前1MB之下的GDT地址改到0XC000 0000 之上,加上0xC000 0000，其实不改也行
+    sgdt [gdt_ptr]
+    mov eax, [gdt_ptr + 2]
+    add eax, 0XC000_0000
+    mov [gdt_ptr + 2], eax
+    ;栈指针也加一下
+    add esp, 0xC000_0000
+    add ebp, 0xC000_0000
+
+    ;将页目录地址赋值给CR3， 4K对齐的，只有高20位表示地址， 存的是真实的物理地址
+    ;---------31~12-----------11~5--------4-------3-------2~0---
+    ;|  物理地址(31~12)    |  未定义  |   PCD  |  PWT  | 未定义 |
+    ;-----------------------------------------------------------
+    mov eax, KERNEL_PAGE_DIR_ADDR
+    and eax, 0xFFFF_F000
+    mov cr3, eax
+
+    ;CR0的PG位打开,开启分页机制
+    mov eax, cr0
+    or eax, 0x8000_0000
+    mov cr0, eax
+
+    ;重新加载下gdtr寄存器
+    lgdt [gdt_ptr]
 
 
     
