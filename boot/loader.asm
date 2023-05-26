@@ -1,5 +1,16 @@
 %include "include/boot.inc"
 
+DISK_LBA28_LOW_PORT_ADDR equ 0x1F3
+DISK_LBA28_MID_PORT_ADDR equ 0x1F4
+DISK_LBA28_HIGH_PORT_ADDR equ 0x1F5
+DISK_LBA28_EXHIGH_PORT_ADDR equ 0x1F6 ;最高的4位LBA地址，写入到这个寄存器的低4位
+DISK_DEVICE_PORT_ADDR equ 0x1F6
+DISK_COMMAND_PORT_ADDR equ 0x1F7
+DISK_COMMAND_READ equ 0x20
+DISK_COMMAND_WRITE equ 0x30
+DISK_COMMAND_IDENTIFY equ 0xEC
+DISK_DATA_PORT_ADDR equ 0x1F0
+
 SECTION loader vstart=LOADER_BASE_ADDR
 [bits 16] ;还没开启保护模式，目前还是16位
 jmp loader_start
@@ -89,6 +100,18 @@ pe_mode_start:
     ;重新加载下gdtr寄存器
     lgdt [gdt_ptr]
 
+    mov eax, KERNEL_START_SECTOR
+    mov ebx, KERNEL_BIN_BASE_ADDR
+    mov ecx, KERNEL_SIZE_SECTOR
+    call read_disk_32
+    
+    ;再初始化内核
+    call kernel_init
+
+    ;跳到内核运行
+    mov esp, KERNEL_STACK_TOP_INIT ;调整下栈的位置
+    jmp KERNEL_ENTRY_POINT
+    
 
     
 
@@ -152,3 +175,103 @@ setup_kernel_page_dir_and_table:
     ; 4MB-8MB 内核页目录和页表
     popad
     ret
+
+;32位下读取磁盘,还是LBA28方法, 最大能支持到128GB
+; 参数:eax:读取数据的起始逻辑扇区号, LBA28模式，只取低28位
+;ebx:数据存放的地址
+;ecx:读取扇区的数目
+read_disk_32:
+    pusha
+    ; 写入lba28的起始地址
+    mov dx, DISK_LBA28_LOW_PORT_ADDR
+    out dx, al
+
+    push ecx ;循环移位要用下cx,先放到内存
+    mov cx, 8
+    shr eax, cl
+    mov dx, DISK_LBA28_MID_PORT_ADDR
+    out dx, al
+
+    shr eax,cl
+    mov dx, DISK_LBA28_HIGH_PORT_ADDR
+    out dx, al
+
+    shr eax,cl
+    and al, 0x0f; 写入的最后4位地址
+    ;顺便写入高4位的其它位配置
+    or al, 0xe0; 指定主盘和LBA模式
+    mov dx, DISK_DEVICE_PORT_ADDR
+    out dx,al
+    pop ecx
+
+    ;要读取的扇区起始地址写完，开始准备发送读命令
+    mov dx, DISK_COMMAND_PORT_ADDR
+    mov al, DISK_COMMAND_READ
+    out dx, al
+
+;等待磁盘准备好数据
+.wait_data:
+    nop
+    in al,dx
+    and al, 0x88; 第4位为1，表示能读取数据，第8位为1表示硬盘繁忙
+    cmp al, 0x08
+    jnz .wait_data
+
+    ;到这里数据已经准备好了可以开始读取
+    ;计算读取的次数,可以一次读两个字节
+    mov eax, ecx
+    mov edx, 256
+    mul edx
+    mov ecx, eax
+    ;开始循环读取数据，并放入指定位置
+    mov dx, DISK_DATA_PORT_ADDR
+
+.read_data:
+    in ax, dx
+    mov [ebx], ax
+    add ebx, 2
+    loop .read_data
+;返回调用
+    popa
+    ret
+
+;将内核文件的节展开成程序在内存中可执行的映像格式
+kernel_init:
+    pushad
+    xor eax, eax
+    xor ebx, ebx		;ebx记录程序头表地址
+    xor ecx, ecx		;cx记录程序头表中的program header数量
+    xor edx, edx		;dx 记录program header尺寸,即e_phentsize
+
+    mov dx, [KERNEL_BIN_BASE_ADDR + 42] ;e_phentsize,表示program header里每个项目的大小
+    mov ebx, [KERNEL_BIN_BASE_ADDR + 28]   ; e_phoff,表示第1 个program header在文件中的偏移量
+    add ebx, KERNEL_BIN_BASE_ADDR ;加上在内存的起始地址
+    mov cx, [KERNEL_BIN_BASE_ADDR + 44]    ;e_phnum,表示有几个program header
+
+;开始处理每个程序头
+.process_segment:
+    mov eax, [ebx] ;取e_type，判断当前segment类型
+    cmp eax, PT_NULL
+    je .skip_PT_NULL ;相等就跳过
+    ;以下是处理需要载入的内存类型
+    ;目前ebx,ecx,edx都保存了有用的值, 使用时尽量要备份，小心被覆盖了找不回来
+    mov eax, [ebx + 4] ;p_offset, segment在文件内的偏移
+    add eax, KERNEL_BIN_BASE_ADDR ;加上内存地址
+    mov esi, eax
+
+    mov eax, [ebx + 8] ;p_vaddr segment需要存放的虚拟内存地址
+    mov edi, eax
+    cld ;正向复制
+    mov eax, ecx ;保存下当前的ecx值
+    mov ecx, [ebx + 16] ;e_filesz,该段在文件内的大小
+    rep movsb
+    mov ecx, eax
+    
+.skip_PT_NULL:
+    add ebx, edx ;edx存的是每个项目的大小, 加上使得ebx指向下一个项的开头
+    loop .process_segment
+
+    popad
+    ret
+
+
