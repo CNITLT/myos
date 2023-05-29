@@ -1,0 +1,13 @@
+CC=gcc
+CFLAGS=-m32 -I../lib/kernel -I../lib -nostdinc -nostdlib
+LD32=-m elf_i386
+
+kernel.bin:main.o
+	make -C ../lib/kernel all
+	ld $(LD32) main.o ../lib/kernel/print.o   -e main -Ttext 0xC0001500 -o kernel.bin
+main.o:main.c
+	$(CC) $(CFLAGS) main.c -o main.o -c
+.PHONY:clean
+clean:
+	-rm -f kernel.bin
+	-rm -f main.o
