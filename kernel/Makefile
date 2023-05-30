@@ -4,7 +4,7 @@ LD32=-m elf_i386
 
 kernel.bin:main.o
 	make -C ../lib/kernel all
-	ld $(LD32) main.o ../lib/kernel/print.o   -e main -Ttext 0xC0001500 -o kernel.bin
+	ld $(LD32) main.o ../lib/kernel/print.o   -e main -Ttext 0xC0002000 -o kernel.bin
 main.o:main.c
 	$(CC) $(CFLAGS) main.c -o main.o -c
 .PHONY:clean

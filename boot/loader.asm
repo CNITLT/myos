@@ -110,7 +110,9 @@ pe_mode_start:
 
     ;跳到内核运行
     mov esp, KERNEL_STACK_TOP_INIT ;调整下栈的位置
-    jmp KERNEL_ENTRY_POINT
+    ;读取入口地址
+    mov eax, [KERNEL_BIN_BASE_ADDR+24]
+    jmp eax
     
 
     

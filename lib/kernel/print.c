@@ -1,4 +1,33 @@
 #include "print.h"
+#include "io.h"
+
+
+uint32_t read_cursor_loc(){
+    uint32_t loc = 0;
+    outb(VGA_CRT_ADDR_REG_PORT,VGA_CRT_CURSOR_HIGH);
+    loc = inb(VGA_CRT_DATA_REG_PORT);
+    loc = loc << 8;
+    
+    outb(VGA_CRT_ADDR_REG_PORT,VGA_CRT_CURSOR_LOW);
+    loc += inb(VGA_CRT_DATA_REG_PORT); 
+    return loc;
+}
+void set_cursor_loc(uint32_t pos){
+    outb(VGA_CRT_ADDR_REG_PORT,VGA_CRT_CURSOR_LOW);
+    outb(VGA_CRT_DATA_REG_PORT,pos & 0xFF);
+    outb(VGA_CRT_ADDR_REG_PORT,VGA_CRT_CURSOR_HIGH);
+    outb(VGA_CRT_DATA_REG_PORT,(pos & 0xFF00) >> 8); 
+}
+void roll_up(){
+    char (*screen)[80][2] = (void*)VGA_TXT_MODE_START_ADDR;
+    for(int row = 0; row < 24; row++){
+        for(int col = 0; col < 80; col++){
+            screen[row][col][0] = screen[row+1][col][0];
+            screen[row][col][1] = screen[row+1][col][1];  
+        }
+    }
+    set_cursor_loc(read_cursor_loc() - 80);
+}
 
 void put_char(char ch){
     char (*screen)[80][2] = (void*)VGA_TXT_MODE_START_ADDR;//显存其实地址,[x][y][0] x行，y列，显示的字符 [x][y][1]x行，y列，显示的颜色
@@ -63,4 +92,14 @@ void put_int(int32_t num){
     for(;i>0; i--){
         put_char(stack[i-1]);
     }
+}
+
+void clear_screen(){
+    char (*screen)[80][2] = (void*)VGA_TXT_MODE_START_ADDR;
+    for(int row = 0; row < 25; row++){
+        for(int col = 0; col < 80; col++){
+            screen[row][col][0] = 0;
+        }
+    }
+    set_cursor_loc(0);
 }
