@@ -1,13 +1,14 @@
 #include "print.h"
 #include "io.h"
+#include "interrupt.h"
+
 
 int main(){
     clear_screen();
     set_cursor_loc(0);
-    int j = 0;
+    interrupt_init();
     while(1){
-        put_int(j++);
-        put_char('\n');
+         asm volatile("int $1");
     }
     return 0;
 }
