@@ -13,7 +13,17 @@ typedef void (*interrupt_func_handler)(void);
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func);
 
 /*
-@brief 中断机制初始化
+@brief 中断机制初始化,包含了IDT,中断控制器的初始化
 */
 void interrupt_init();
+
+/*
+@brief 开中断
+*/
+void open_interrupt();
+
+/*
+@brief 关中断
+*/
+void close_interrupt();
 #endif
