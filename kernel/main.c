@@ -1,6 +1,7 @@
 #include "print.h"
 #include "io.h"
 #include "init.h"
+#include "debug.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -17,9 +18,8 @@ int main(){
     init_all();
     open_interrupt();
     register_interrupt_func(0x20, timer_interrupt);
-    while(1){
-       
-        
+    while(1){ 
+        assert(1==2);
     }
     return 0;
 }

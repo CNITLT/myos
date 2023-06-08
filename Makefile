@@ -8,8 +8,8 @@ ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
 BUILD_DIR=./build
 
-OBJS = $(BUILD_DIR)/print.o $(BUILD_DIR)/timer.o $(BUILD_DIR)/interrupt.o \
-	$(BUILD_DIR)/init.o $(BUILD_DIR)/main.o
+OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/debug.o  $(BUILD_DIR)/print.o $(BUILD_DIR)/timer.o \
+	$(BUILD_DIR)/interrupt.o $(BUILD_DIR)/init.o 
 
 
 .PHONY:all
@@ -30,7 +30,7 @@ $(BUILD_DIR)/kernel.bin:$(OBJS)
 
 #---------kernel-----------
 $(BUILD_DIR)/%.o:./kernel/%.c 
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< -o $@ 
 
 #---------------boot-----------
 $(BUILD_DIR)/mbr.bin:./boot/mbr.asm 
