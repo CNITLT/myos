@@ -250,12 +250,49 @@ void interrupt_init(){
 }
 
 
-
-void open_interrupt(){
-    asm volatile("sti;");
+#define EFLAGS_IF 0x200
+interrupt_state get_interrupt_state(){
+    interrupt_state state;
+    uint32_t eflags;
+    asm volatile("\
+    pushf;\
+    movl 4(%%esp), %%eax;\
+    addl 4, %%esp;"\
+    :"=a"(eflags)::);
+    if(eflags&EFLAGS_IF){
+        state = INTERRUPT_ENABLE;
+    }
+    else{
+        state = INTERRUPT_DISABLE; 
+    }
+    return state;
 }
 
 
-void close_interrupt(){
-    asm volatile("cli;");
+interrupt_state open_interrupt(){
+    interrupt_state state = get_interrupt_state();
+    if(state != INTERRUPT_ENABLE){
+       asm volatile("sti;");
+    }
+    return state;
 }
+
+
+interrupt_state close_interrupt(){
+    interrupt_state state = get_interrupt_state();
+    if(state != INTERRUPT_DISABLE){
+        asm volatile("cli;");
+    }
+    return state; 
+}
+
+interrupt_state set_interrupt_state(interrupt_state state){
+    if(state == INTERRUPT_ENABLE){
+        return open_interrupt();
+    }
+    else if(state == INTERRUPT_DISABLE){
+        return close_interrupt();
+    }
+}
+
+

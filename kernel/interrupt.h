@@ -12,18 +12,39 @@ typedef void (*interrupt_func_handler)(void);
 */
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func);
 
+
+typedef 
+enum interrupt_state{INTERRUPT_DISABLE = 0,INTERRUPT_ENABLE}
+interrupt_state;
 /*
 @brief 中断机制初始化,包含了IDT,中断控制器的初始化
 */
 void interrupt_init();
 
+
+
+/*
+@brief 读取当前中断状态
+@return interrupt_state 当前中断状态
+*/
+interrupt_state get_interrupt_state();
 /*
 @brief 开中断
+@return interrupt_state 之前的中断状态
 */
-void open_interrupt();
+interrupt_state open_interrupt();
 
 /*
 @brief 关中断
+@return interrupt_state 之前的中断状态
 */
-void close_interrupt();
+interrupt_state close_interrupt();
+
+
+/*
+@brief 设置中断状态
+@return interrupt_state 之前的中断状态
+*/
+interrupt_state set_interrupt_state(interrupt_state state);
+
 #endif

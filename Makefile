@@ -1,23 +1,52 @@
 dd=dd of=./c.img bs=512 conv=notrunc
+AS = nasm
+ASFLAGS = -I./boot/include -I./boot
+CC = gcc
+CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -nostdinc -nostdlib -m32 -c
+LD = ld
+ENTRY_POINT = 0xC0002000
+LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
+BUILD_DIR=./build
+
+OBJS = $(BUILD_DIR)/print.o $(BUILD_DIR)/timer.o $(BUILD_DIR)/interrupt.o \
+	$(BUILD_DIR)/init.o $(BUILD_DIR)/main.o
+
+
 .PHONY:all
-all:mbr loader kernel.bin timer.o
-	$(dd) if=./boot/mbr count=1
-	$(dd) if=./boot/loader count=4 seek=2
-	$(dd) if=./kernel/kernel.bin count=200 seek=9
-mbr:
-	make -C boot mbr
-	
-loader:
-	make -C boot loader
+all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/kernel.bin
+	$(dd) if=$(BUILD_DIR)/mbr.bin count=1
+	$(dd) if=$(BUILD_DIR)/loader.bin count=4 seek=2
+	$(dd) if=$(BUILD_DIR)/kernel.bin count=200 seek=9
 
-kernel.bin:
-	make -C kernel kernel.bin
 
-timer.o:
-	make -C device timer.o
+
+
+.PHONY:make_build_dir
+make_build_dir:
+	if [[ ! -d $(BUILD_DIR) ]];then mkdir $(BUILD_DIR);fi
+
+$(BUILD_DIR)/kernel.bin:$(OBJS)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+#---------kernel-----------
+$(BUILD_DIR)/%.o:./kernel/%.c 
+	$(CC) $(CFLAGS) $< -o $@
+
+#---------------boot-----------
+$(BUILD_DIR)/mbr.bin:./boot/mbr.asm 
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(BUILD_DIR)/loader.bin:./boot/loader.asm 
+	$(AS) $(ASFLAGS) $< -o $@
+
+#-----------lib--------------
+$(BUILD_DIR)/%.o:./lib/kernel/%.c 
+	$(CC) $(CFLAGS) $< -o $@
+
+#----------device--------
+$(BUILD_DIR)/%.o:./device/%.c 
+	$(CC) $(CFLAGS) $< -o $@
 
 .PHONY:clean
 clean:
-	make -C boot clean
-	make -C kernel clean
-	make -C device clean
+	rm -rf ./build/*
