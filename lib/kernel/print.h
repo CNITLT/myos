@@ -8,13 +8,52 @@
 #define VGA_CRT_DATA_REG_PORT  0x3D5 //CRT数据寄存器的端口地址，默认是这个，可能会被其它设置影响
 #define VGA_CRT_CURSOR_LOW  0x0F //CRT里光标低8位寄存器
 #define VGA_CRT_CURSOR_HIGH  0x0E //CRT里光标高8位寄存器
+
+
+/*
+@brief 在当前光标位置输出一个字符
+@param ch:char 输出的字符
+*/
 void put_char(char ch);
+
+/*
+@brief 在当前光标位置输出一个字符串
+@param str:char* 字符串的起始地址
+*/
 void put_str(char* str);
+
+/*
+@brief 在当前光标位置以十进制输出数字
+@param num:int32_t 输出的数字
+*/
 void put_int(int32_t num);
+
+/*
+@brief 在当前光标位置以十六进制输出数字
+@param num:uint32_t 输出的数字
+*/
+void put_hex(uint32_t num);
+
+/*
+@brief 清空屏幕
+*/
 void clear_screen();
-uint32_t strlen(char* str);
+
+/*
+@brief 读取当前的光标位置
+@return uint32_t 光标位置
+*/
 uint32_t read_cursor_loc();
+
+/*
+@brief 设置光标位置
+@param pos:uint32_t 光标位置
+*/
 void set_cursor_loc(uint32_t pos);
+
+/*
+@brief 向上滚动一行屏幕
+*/
 void roll_up();
 
 #endif

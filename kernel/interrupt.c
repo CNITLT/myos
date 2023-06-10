@@ -256,7 +256,7 @@ interrupt_state get_interrupt_state(){
     uint32_t eflags;
     asm volatile("\
     pushf;\
-    movl 4(%%esp), %%eax;\
+    movl (%%esp), %%eax;\
     addl 4, %%esp;"\
     :"=a"(eflags)::);
     if(eflags&EFLAGS_IF){

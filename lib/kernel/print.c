@@ -61,14 +61,6 @@ void put_char(char ch){
     }
 }
 
-uint32_t strlen(char* str){
-    uint32_t len = 0;
-    while(*str != 0){
-        *str++;
-        len++;
-    }
-    return len;
-}
 
 void put_str(char* str){
     while(*str != 0){
@@ -91,6 +83,25 @@ void put_int(int32_t num){
     }while(num != 0);
     for(;i>0; i--){
         put_char(stack[i-1]);
+    }
+}
+
+void put_hex(uint32_t num){
+    uint8_t stack[8];
+    int i = 0;
+    do{
+       stack[i] = num % 16;
+       num /= 16;
+       i++;
+    }while(num != 0);
+    for(;i>0;i--){
+        uint8_t ch = stack[i-1];
+        if(ch <= 9){
+            put_char('0' + ch);
+        }
+        else{
+            put_char('A' + ch - 10);
+        }
     }
 }
 

@@ -2,14 +2,14 @@ dd=dd of=./c.img bs=512 conv=notrunc
 AS = nasm
 ASFLAGS = -I./boot/include -I./boot
 CC = gcc
-CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -nostdinc -nostdlib -m32 -c
+CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -nostdinc -nostdlib -m32 -c -fno-builtin  
 LD = ld
 ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
 BUILD_DIR=./build
 
 OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/debug.o  $(BUILD_DIR)/print.o $(BUILD_DIR)/timer.o \
-	$(BUILD_DIR)/interrupt.o $(BUILD_DIR)/init.o 
+	$(BUILD_DIR)/interrupt.o $(BUILD_DIR)/init.o $(BUILD_DIR)/string.o
 
 
 .PHONY:all
