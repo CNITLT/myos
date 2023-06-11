@@ -40,7 +40,23 @@ GDT_SELECTOR_DATA equ (0x0002<<3) + TI_GDT + RPL_0	 ; 数据段选择子
 gdt_ptr  dw  GDT_LIMIT 
     dd  GDT_BASE
 
+
 loader_start:
+    ;获取内存地址
+    ;-------  int 15h eax = 0000E820h ,edx = 534D4150h ('SMAP') 获取内存布局  -------
+   mov dword [ARDS_COUNT_ADDR], 0
+   xor ebx, ebx		      ;第一次调用时，ebx值要为0
+   mov edx, 0x534d4150	      ;edx只赋值一次，循环体中不会改变
+   mov di, ARDS_ARR_ADDR	      ;ards结构缓冲区
+.e820_mem_get_loop:	      ;循环获取每个ARDS内存范围描述结构
+   mov eax, 0x0000e820	      ;执行int 0x15后,eax值变为0x534d4150,所以每次执行int前都要更新为子功能号。
+   mov ecx, 20		      ;ARDS地址范围描述符结构大小是20字节
+   int 0x15
+   add di, cx		      ;使di增加20字节指向缓冲区中新的ARDS结构位置
+   inc word [ARDS_COUNT_ADDR]	      ;记录ARDS数量
+   cmp ebx, 0		      ;若ebx为0且cf不为1,这说明ards全部返回，当前已是最后一个
+   jnz .e820_mem_get_loop
+
     ;开启保护模式, 这里只开启了分段，分页还没开启
     ;开启A20地址线
     ;加载GDTR
