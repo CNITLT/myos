@@ -8,8 +8,8 @@ ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
 BUILD_DIR=./build
 
-OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/debug.o  $(BUILD_DIR)/print.o $(BUILD_DIR)/timer.o \
-	$(BUILD_DIR)/interrupt.o $(BUILD_DIR)/init.o $(BUILD_DIR)/string.o
+OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,\
+$(notdir $(wildcard ./kernel/*.c ./device/*.c ./lib/*.c ./lib/kernel/*.c)))
 
 
 .PHONY:all
@@ -17,9 +17,6 @@ all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/ker
 	$(dd) if=$(BUILD_DIR)/mbr.bin count=1
 	$(dd) if=$(BUILD_DIR)/loader.bin count=4 seek=2
 	$(dd) if=$(BUILD_DIR)/kernel.bin count=200 seek=9
-
-
-
 
 .PHONY:make_build_dir
 make_build_dir:
@@ -50,3 +47,7 @@ $(BUILD_DIR)/%.o:./device/%.c
 .PHONY:clean
 clean:
 	rm -rf ./build/*
+
+.PHONY:test
+test:
+	echo $(OBJS)
