@@ -9,7 +9,7 @@ void bitmap_init(bitmap* p_bitmap) {
 
 bit_state bitmap_get(bitmap* p_bitmap, uint32_t index_bit) {
     assert(index_bit < p_bitmap->len_byte * 8);
-    return bit_state(p_bitmap->bits[index_bit / 8] >> (index_bit % 8));
+    return (bit_state)(p_bitmap->bits[index_bit / 8] >> (index_bit % 8));
 }
 
 
