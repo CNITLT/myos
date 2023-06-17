@@ -3,6 +3,7 @@
 #include "init.h"
 #include "debug.h"
 #include "string.h"
+#include "memory.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -13,7 +14,9 @@ void timer_interrupt(void){
     put_int(count);
     put_char('\n');
 }
+
 int main(){
+    /*
     clear_screen();
     set_cursor_loc(0);
     init_all();
@@ -21,21 +24,9 @@ int main(){
    
     //open_interrupt();
     close_interrupt();
-
-    char *str = "\n123456\n";
-    char strarr[100];
-    //put_hex(strarr);
-    //put_char('\n');
-    //put_hex(str);
-    memset(strarr, 0, 100);
-    memcpy(strarr, str, strlen(str)+1);
-    put_int(strlen(strarr));
-    //put_str(strarr);
-    strcat(strarr, str);
-    put_str("strcat:\n");
-    put_int(strlen(strarr)); 
-    put_str(strarr);
-    put_int(strchrs(strarr, '\n'));
+*/
+    void * p = __alloca(0x2);
+    put_hex(p);
     while(1){ 
     }
     return 0;

@@ -1,5 +1,5 @@
-#ifndef __DEBUG_H
-#define __DEBUG_H
+#ifndef __KERNEL_DEBUG_H
+#define __KERNEL_DEBUG_H
 
 
 /*

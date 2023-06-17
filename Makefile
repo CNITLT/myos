@@ -17,7 +17,7 @@ all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/ker
 	$(dd) if=$(BUILD_DIR)/mbr.bin count=1
 	$(dd) if=$(BUILD_DIR)/loader.bin count=4 seek=2
 	$(dd) if=$(BUILD_DIR)/kernel.bin count=200 seek=9
-
+	readelf -h $(BUILD_DIR)/kernel.bin | grep 入口点
 .PHONY:make_build_dir
 make_build_dir:
 	if [[ ! -d $(BUILD_DIR) ]];then mkdir $(BUILD_DIR);fi

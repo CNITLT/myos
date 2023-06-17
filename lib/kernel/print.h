@@ -1,5 +1,5 @@
-#ifndef __PRINT_H
-#define __PRINT_H
+#ifndef __LIB_KERNEL_PRINT_H
+#define __LIB_KERNEL_PRINT_H
 #include "stdint.h"
 #define VGA_TXT_MODE_START_ADDR  0xB8000
 #define BLACK_BACKGROUND_WHITE_CHAR 0x7 //黑底白字

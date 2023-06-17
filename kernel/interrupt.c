@@ -1,7 +1,7 @@
 #include "interrupt.h"
 #include "print.h"
 #include "io.h"
-
+#include "stddef.h"
 //中断门描述符定义
 typedef struct interrupt_gate_desc{
     uint16_t func_offset_low; //中断处理程序在目标代码段的偏移中的低16位
@@ -24,7 +24,7 @@ typedef struct interrupt_gate_desc{
 #define DEFAULT_RET asm volatile("iret;");
 
 
-#define NAKEDFUNC __attribute__((naked))
+
 //代理中断函数，主要用来处理返回到正确的地方,普通函数都是ret返回
 #define IDT_FUNC_ENTRY_PROXY(INTERRUPT_NUM, RET_TYPE) \
 NAKEDFUNC static void  IDT_FUNC_ENTRY_PROXY##INTERRUPT_NUM(void){ \

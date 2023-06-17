@@ -1,4 +1,5 @@
-#ifndef __STDDEF_H
-#define __STDDEF_H
+#ifndef __LIB_STDDEF_H
+#define __LIB_STDDEF_H
 #define NULL ((void*)0)
+#define NAKEDFUNC __attribute__((naked))
 #endif

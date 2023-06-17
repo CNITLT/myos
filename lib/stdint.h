@@ -1,5 +1,5 @@
-#ifndef _LIB_STDINT_H
-#define _LIB_STDINT_H
+#ifndef __LIB_STDINT_H
+#define __LIB_STDINT_H
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 
@@ -13,4 +13,6 @@ typedef signed long long int int64_t;
 typedef unsigned long long int uint64_t;
 
 typedef uint32_t size_t;
+
+
 #endif

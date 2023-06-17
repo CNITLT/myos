@@ -1,5 +1,5 @@
-#ifndef __STRING_H
-#define __STRING_H
+#ifndef __LIB_KERNEL_STRING_H
+#define __LIB_KERNEL_STRING_H
 #include "stdint.h"
 /*
 @brief 为某个地址开始的count字节大小的内存区域赋值

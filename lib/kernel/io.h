@@ -1,5 +1,5 @@
-#ifndef __IO_h
-#define __IO_H
+#ifndef __LIB_KERNEL_IO_h
+#define __LIB_KERNEL_IO_h
 #include "stdint.h"
 //以下函数都用内联实现，为了减少栈的消耗，故没有对应的.c文件
 //这是AT&T格式的汇编，源操作数与目的操作数的位置与intel格式的反着的

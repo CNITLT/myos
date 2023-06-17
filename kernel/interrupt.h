@@ -1,5 +1,5 @@
-#ifndef __INTERRUPT_H
-#define __INTERRUPT_H
+#ifndef __KERNEL_INTERRUPT_H
+#define __KERNEL_INTERRUPT_H
 #include "stdint.h"
 
 //实际的中断函数类型

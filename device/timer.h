@@ -1,5 +1,5 @@
-#ifndef __TIMER_H
-#define __TIMER_H
+#ifndef __DEVICE_TIMER_H
+#define __DEVICE_TIMER_H
 
 /*
 *初始化时钟计数器, 每隔一定时间发送一次中断
