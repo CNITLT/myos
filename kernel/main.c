@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "string.h"
 #include "memory.h"
+#include "e820.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -27,6 +28,7 @@ int main(){
 */
     void * p = __alloca(0x2);
     put_hex(p);
+    print_e820_table();
     while(1){ 
     }
     return 0;

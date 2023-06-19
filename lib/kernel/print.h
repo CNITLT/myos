@@ -35,6 +35,11 @@ void put_int(int32_t num);
 void put_hex(uint32_t num);
 
 /*
+@brief 在当前光标位置以十六进制输出数字
+@param num:uint64_t 输出的数字
+*/
+void put_hex64(uint64_t num);
+/*
 @brief 清空屏幕
 */
 void clear_screen();

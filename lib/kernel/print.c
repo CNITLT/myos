@@ -105,6 +105,17 @@ void put_hex(uint32_t num){
     }
 }
 
+
+void put_hex64(uint64_t num){
+    uint32_t low = num;
+    uint32_t high = num >> 32;
+    if(high != 0){
+        put_hex(high);
+    }
+    put_hex(low);
+}
+
+
 void clear_screen(){
     char (*screen)[80][2] = (void*)VGA_TXT_MODE_START_ADDR;
     for(int row = 0; row < 25; row++){

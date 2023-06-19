@@ -87,18 +87,20 @@ pe_mode_start:
     mov gs, ax
     mov ss, ax
     mov esp,LOADER_STACK_TOP
+    mov ebp,LOADER_STACK_TOP
     ;创建页目录和页表
     call setup_kernel_page_dir_and_table
     ;准备开启分页机制
     ;根据GDTR的地址找GDT的时候，如果开启分页的话，会要经过页表的转化
     ;将之前1MB之下的GDT地址改到0XC000 0000 之上,加上0xC000 0000，其实不改也行
-    sgdt [gdt_ptr]
-    mov eax, [gdt_ptr + 2]
-    add eax, 0XC000_0000
-    mov [gdt_ptr + 2], eax
+    ;这段不用了，重新排布了内存布局
+    ;sgdt [gdt_ptr]
+    ;mov eax, [gdt_ptr + 2]
+    ;add eax, 0XC000_0000
+    ;mov [gdt_ptr + 2], eax
     ;栈指针也加一下
-    add esp, 0xC000_0000
-    add ebp, 0xC000_0000
+    ;add esp, 0xC000_0000
+    ;add ebp, 0xC000_0000
 
     ;将页目录地址赋值给CR3， 4K对齐的，只有高20位表示地址， 存的是真实的物理地址
     ;---------31~12-----------11~5--------4-------3-------2~0---
@@ -114,7 +116,8 @@ pe_mode_start:
     mov cr0, eax
 
     ;重新加载下gdtr寄存器
-    lgdt [gdt_ptr]
+    ;重新排布内存后，不需要了
+    ;lgdt [gdt_ptr]
 
     mov eax, KERNEL_START_SECTOR
     mov ebx, KERNEL_BIN_BASE_ADDR
@@ -125,7 +128,8 @@ pe_mode_start:
     call kernel_init
 
     ;跳到内核运行
-    mov esp, KERNEL_STACK_TOP_INIT ;调整下栈的位置
+    mov esp, KERNEL_STACK_TOP_ADDR - 32 ;调整下栈的位置, 32字节是个缓冲区，用于将ESP和EBP隔开
+    mov ebp, KERNEL_STACK_TOP_ADDR
     ;读取入口地址
     mov eax, [KERNEL_BIN_BASE_ADDR+24]
     jmp eax
@@ -143,54 +147,86 @@ loop_end:
 setup_kernel_page_dir_and_table:
     pushad
     ;创建页目录和页表
-    ;虚拟地址3GB往上1mb全映射到低端1MB，虚拟地址低端1MB映射到物理地址低端1MB
+    ;虚拟地址3GB往上16mb全映射到低端8-24MB，虚拟地址低端4MB映射到物理地址低端4MB
+    ;物理地址4-8MB,映射到虚拟地址最后4MB,是页目录和页表
     ;先清空页目录和页表所在的整个4MB空间
     mov ecx, 0x100000;//1MB大小,之后每次清空4字节，共4MB
     mov esi, KERNEL_PAGE_DIR_ADDR
     mov eax, 0
 .clear_kernel_page_dir_entry:
     mov [esi], eax
-    inc esi
+    add esi, 4
     loop .clear_kernel_page_dir_entry
 
-    ;创建页目录
+;开始映射物理低端4MB到虚拟低端4MB
+    mov esi, KERNEL_PAGE_DIR_ADDR + 0x1000 ;第一个页表首地址
+    mov ecx, 1024 ;映射4MB，一共1024项
+    mov eax, 0
+    or eax, PT_US_U | PT_RW_RW | PT_P_EXIST
+.create_page_table_entry_0_4:
+    mov [esi], eax
+    add eax, 4096
+    add esi, 4
+    loop .create_page_table_entry_0_4
+
+;映射页目录和页表 物理地址4MB-8MB
     mov esi, KERNEL_PAGE_DIR_ADDR
     ;先填写属性
     mov eax, KERNEL_PAGE_DIR_ADDR
     add eax, 0x1000 ;下标为0的页表地址
     and eax, 0xFFFFF000;清空属性位
     or eax, PD_US_U | PD_RW_RW | PD_P_EXIST;填写属性,主要这三个就行，其他全0的就行了
-    mov [esi], eax
-    mov [esi + 0xC00], eax
-    sub eax, 0x1000 ;将地址指向页目录本身
-    mov [esi + 4092], eax ;最后一个页目录项指向自己，这样在虚拟地址空间的映射上，就是最后4MB是页目录和页表
+    mov ecx,1023
 
-    ;虚拟地址3GB网上对应的页目录项先填写好对应的值，指向对应的页表，虽然这些页表存在，但里面的值都是0， 从0XC01开始，0xC00已经有值了
-    mov esi, KERNEL_PAGE_DIR_ADDR + 0xC01 * 4 ;下标0xC01的表项
-    mov eax, KERNEL_PAGE_DIR_ADDR + 0x2000 ;下标1的页表地址 KERNEL_PAGE_DIR_ADDR 页目录地址 KERNEL_PAGE_DIR_ADDR+0x1000下标0的页标地址
-    or eax, PD_US_U | PD_RW_RW | PD_P_EXIST ;属性
-    mov ecx, 254 ;一共256个，0xC00和最后一个指向页目录自己的已经有值了，所以只剩254个
-.create_other_kernel_page_dir_entry:
+.create_page_dir:
     mov [esi], eax
-    add esi, 4
+    add esi,4
     add eax, 0x1000
-    loop .create_other_kernel_page_dir_entry
+    loop .create_page_dir
+
+    mov eax, KERNEL_PAGE_DIR_ADDR
+    and eax, 0xFFFFF000;
+    or eax, PD_US_U | PD_RW_RW | PD_P_EXIST;
+    mov [esi], eax ;最后一个页目录项指向自己，这样在虚拟地址空间的映射上，就是最后4MB是页目录和页表
 
 
+;映射8-16MB到0xc0000000-0xc0800000 代码段 数据段等
+    mov esi, KERNEL_PAGE_DIR_ADDR
+    add esi, 0x1000
+    add esi, 0x300*0x1000 ;定位到0XC0000000对应的页表起点
+    mov eax, 0x800000 ;8MB
+    and eax, 0xFFFFF000;清空属性位 
+    or eax, PD_US_U | PD_RW_RW | PD_P_EXIST;填写属性
+    mov ecx, 2048 ;一共2048个表项目
 
-    ;创建页表, 直接映射4MB了，多一点算了
-    mov esi, KERNEL_PAGE_DIR_ADDR + 0x1000 ;第一个页表首地址
-    mov ecx, 1024 ;映射4MB，一共1024项
-    mov eax, 0
-    or eax, PT_US_U | PT_RW_RW | PT_P_EXIST
-.create_page_table_entry:
+.create_kernel_bin_page_table:
     mov [esi], eax
-    add eax, 4096
-    add esi, 4
-    loop .create_page_table_entry
+    add esi,4
+    add eax,4096
+    loop .create_kernel_bin_page_table
+
+;映射16-24MB到0xFB800000-0xFC000000 当栈用
+    mov esi, KERNEL_PAGE_DIR_ADDR
+    add esi, 0x1000
+    add esi, (KERNEL_FULL_STACK_TOP_ADDR >> 22)*0x1000 ;定位到栈最大时对应的页表起点
+    mov eax, 0x1000000 ;16MB
+    and eax, 0xFFFFF000;清空属性位 
+    or eax, PD_US_U | PD_RW_RW | PD_P_EXIST;填写属性
+    mov ecx, 2048 ;一共2048个表项目
+
+.create_kernel_stack_page_table:
+    mov [esi], eax
+    add esi,4
+    add eax,4096
+    loop .create_kernel_stack_page_table
+    
+
     ; 目前物理内存布局
-    ; 0-4MB 内核使用
-    ; 4MB-8MB 内核页目录和页表
+    ; 0-1MB boot使用 MBR LOADER使用
+    ; 1-4MB 内核文件，内核映像成功展开后这3MB内存可随意使用
+    ; 4MB-8MB 内核页目录和页表  映射到虚拟地址为 最后末尾的4MB
+    ; 8-16MB 内核展开后程序映像 映射的虚拟地址为3GB-3GB+8MB这段
+    ; 16-24MB 内核栈 映射的虚拟地址为 0xFB800000-0xFc000000这段
     popad
     ret
 
