@@ -107,12 +107,22 @@ void put_hex(uint32_t num){
 
 
 void put_hex64(uint64_t num){
-    uint32_t low = num;
-    uint32_t high = num >> 32;
-    if(high != 0){
-        put_hex(high);
+    uint8_t stack[16];
+    int i = 0;
+    do{
+       stack[i] = num % 16;
+       num /= 16;
+       i++;
+    }while(num != 0);
+    for(;i>0;i--){
+        uint8_t ch = stack[i-1];
+        if(ch <= 9){
+            put_char('0' + ch);
+        }
+        else{
+            put_char('A' + ch - 10);
+        }
     }
-    put_hex(low);
 }
 
 
