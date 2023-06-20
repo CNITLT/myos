@@ -1,6 +1,7 @@
 #ifndef __KERNEL_PAGE_H
 #define __KERNEL_PAGE_H
 #include "stdint.h"
+#define PAGE_SIZE 4096
 //页属性定义
 typedef struct page{
     uint32_t P:1; //P 为1表示该项存在于内存
@@ -15,5 +16,24 @@ typedef struct page{
     uint32_t AVL:3;//硬件保留不用，软件可以自定义
     uint32_t PADDR:20;//物理地址
 }page;
+typedef page* page_vaddr_t;
+typedef page* page_paddr_t;
+
+/*
+@brief 在页目录和页面在逻辑上汇集在4MB内的条件下，根据虚拟地址获取到对应的页表项虚拟地址
+@param addr:vaddr_t: 虚拟地址
+@param page_dir:vaddr_t:页目录的虚拟地址
+@return page_vaddr_t 对应的页表项首地址
+*/
+page_vaddr_t get_page_table_entry_vaddr(vaddr_t addr, vaddr_t page_dir);
+
+/*
+@brief 在页目录和页面在逻辑上汇集在4MB内的条件下,根据虚拟地址获取到对应的页目录表项的虚拟地址
+@param addr:vaddr_t: 虚拟地址
+@param page_dir:vaddr_t:页目录的虚拟地址
+@return page_vaddr_t 对应的页表项首地址
+*/
+page_vaddr_t get_page_dir_entry_vaddr(vaddr_t addr, vaddr_t page_dir);
+
 
 #endif

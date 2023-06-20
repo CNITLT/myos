@@ -5,6 +5,8 @@
 #include "string.h"
 #include "memory.h"
 #include "e820.h"
+#include "page.h"
+#include "stddef.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -26,9 +28,20 @@ int main(){
     //open_interrupt();
     close_interrupt();
 */
-    void * p = __alloca(0x2);
-    put_hex(p);
     print_e820_table();
+    
+    pmemeory_pool_init();
+    addr_t addr;
+    size_t count;
+    do{
+        addr = pmalloc_page(0x100000/4096);
+        put_int(count);
+        count++;
+        put_str(":");
+        put_hex((uint32_t)addr);
+        put_str("\n");
+    }while(addr);
+    put_hex((uint32_t)&addr);
     while(1){ 
     }
     return 0;

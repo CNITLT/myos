@@ -1,5 +1,5 @@
 # 内存 单位MB
-megs: 512
+megs: 128
 
 # 设置BIOS和VGA BIOS
 romimage: file=./bochsConfigs/BIOS-bochs-latest, options=fastboot

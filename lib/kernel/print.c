@@ -26,6 +26,10 @@ void roll_up(){
             screen[row][col][1] = screen[row+1][col][1];  
         }
     }
+    for(int col = 0; col < 80; col++){
+        screen[24][col][0] = 0;
+        screen[24][col][1] = 0;  
+    } 
     set_cursor_loc(read_cursor_loc() - 80);
 }
 

@@ -12,7 +12,9 @@ typedef unsigned int uint32_t;
 typedef signed long long int int64_t;
 typedef unsigned long long int uint64_t;
 
-typedef uint32_t size_t;
+typedef uint64_t size_t;
 
-
+typedef void* vaddr_t;
+typedef void* paddr_t;
+typedef void* addr_t;
 #endif
