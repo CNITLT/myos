@@ -2,6 +2,15 @@
 #define __KERNEL_PAGE_H
 #include "stdint.h"
 #define PAGE_SIZE 4096
+
+//带VALUE的是指用单个成员判断时候的值，而不是用比特位来判断
+#define PAGE_P_VALUE_EXIST 1
+#define PAGE_P_VALUE_UNEXIST 0
+#define PAGE_RW_VALUE_RW 1
+#define PAGE_RW_VALUE_R 0
+#define PAGE_US_VALUE_SYS 0
+#define PAGE_US_VALUE_USER 1
+
 //页属性定义
 typedef struct page{
     uint32_t P:1; //P 为1表示该项存在于内存
@@ -21,19 +30,33 @@ typedef page* page_paddr_t;
 
 /*
 @brief 在页目录和页面在逻辑上汇集在4MB内的条件下，根据虚拟地址获取到对应的页表项虚拟地址
-@param addr:vaddr_t: 虚拟地址
+@param vaddr:vaddr_t: 虚拟地址
 @param page_dir:vaddr_t:页目录的虚拟地址
 @return page_vaddr_t 对应的页表项首地址
 */
-page_vaddr_t get_page_table_entry_vaddr(vaddr_t addr, vaddr_t page_dir);
+page_vaddr_t get_page_table_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
 
 /*
 @brief 在页目录和页面在逻辑上汇集在4MB内的条件下,根据虚拟地址获取到对应的页目录表项的虚拟地址
-@param addr:vaddr_t: 虚拟地址
+@param vaddr:vaddr_t: 虚拟地址
 @param page_dir:vaddr_t:页目录的虚拟地址
 @return page_vaddr_t 对应的页表项首地址
 */
-page_vaddr_t get_page_dir_entry_vaddr(vaddr_t addr, vaddr_t page_dir);
+page_vaddr_t get_page_dir_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
+
+
+/*
+@brief 将虚拟地址转化为对应的物理地址
+@param vaddr:vaddr_t: 虚拟地址
+@param page_dir:vaddr_t: 页目录
+@return paddr_t 转化后的物理地址，如果对应页不存在则返回NULL
+*/
+paddr_t vaddr2paddr(vaddr_t vaddr, vaddr_t page_dir);
+
+//add_page_dir_entry(vaddr_t addr);
+
+//add_page_table_entry();
+
 
 
 #endif
