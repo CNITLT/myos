@@ -17,3 +17,7 @@ keyboard: keymap=./bochsConfigs/x11-pc-us.map
 #硬盘设置
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 ata0-master: type=disk, mode=flat, path="c.img"
+
+
+#时钟配置, 配置为同步，不同步的话bochs里面的时钟比实际的快很多
+clock: sync=realtime, rtc_sync=1, time0=local
