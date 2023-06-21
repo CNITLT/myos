@@ -22,9 +22,13 @@ bit_state bitmap_set(bitmap* p_bitmap, size_t index_bit, bit_state value) {
 }
 
 size_t bitmap_find_range(bitmap* p_bitmap, size_t range_bit) {
+   return bitmap_find_range_from_index (p_bitmap, range_bit, 0);
+}
+
+size_t bitmap_find_range_from_index(bitmap* p_bitmap, size_t range_bit, size_t start_index) {
     assert(range_bit <= p_bitmap->len_bit);
     size_t count = 0;
-    for (size_t i = 0; i < p_bitmap->len_bit; i++) {
+    for (size_t i = start_index; i < p_bitmap->len_bit; i++) {
         if (bitmap_get(p_bitmap, i) == BIT_STATE_UNUSE) {
             count++;
             if (count == range_bit) {
@@ -39,8 +43,10 @@ size_t bitmap_find_range(bitmap* p_bitmap, size_t range_bit) {
 }
 
 
+
 void bitmap_range_set(bitmap* p_bitmap, size_t index_bit, size_t range_bit, bit_state value) {
     assert(index_bit + range_bit - 1 < p_bitmap->len_bit);
+
     for (size_t i = index_bit; i < p_bitmap->len_bit&& i - index_bit< range_bit; i++) {
         bitmap_set(p_bitmap, i, value);
     }

@@ -44,6 +44,15 @@ bit_state bitmap_set(bitmap* p_bitmap, size_t index_bit, bit_state value);
 */
 size_t bitmap_find_range(bitmap* p_bitmap, size_t range_bit);
 
+
+/*
+@brief 从指定起点索引开始查找bitmap内有没有以bit为单位长度的range_bit连续范围的未使用的资源
+@param p_bitmap:bitmap*:bitmap地址
+@param range_bit: size_t: 需要的查找的连续范围的空位范围长度
+@param start_index: size_t: 查找起点
+@return size_t 若查找到返回bit为单位的下标，找不到返回BITMAP_RANGE_NOTFOUND
+*/
+size_t bitmap_find_range_from_index(bitmap* p_bitmap, size_t range_bit, size_t start_index);
 /*
 @brief 设置bitmap1️以index_bit为起点的长range_bit范围的值
 @param p_bitmap:bitmap*:bitmap地址

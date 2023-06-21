@@ -2,6 +2,10 @@
 #define __KERNEL_PAGE_H
 #include "stdint.h"
 #define PAGE_SIZE 4096
+//内核页目录和页表的物理地址
+#define KERNEL_PAGE_DIR_PADDR 0x400000 
+//内核页目录和页表的虚拟地址
+#define KERNEL_PAGE_DIR_VADDR 0xFFFFF000
 
 //带VALUE的是指用单个成员判断时候的值，而不是用比特位来判断
 #define PAGE_P_VALUE_EXIST 1
@@ -10,6 +14,15 @@
 #define PAGE_RW_VALUE_R 0
 #define PAGE_US_VALUE_SYS 0
 #define PAGE_US_VALUE_USER 1
+
+
+#define PAGE_P_ATTR_EXIST 0x1
+#define PAGE_P_ATTR_UNEXIST 0x0
+#define PAGE_RW_ATTR_RW 0x2
+#define PAGE_RW_ATTR_R 0x0
+#define PAGE_US_ATTR_SYS 0x0
+#define PAGE_US_ATTR_USER 0x4
+
 
 //页属性定义
 typedef struct page{
@@ -53,10 +66,27 @@ page_vaddr_t get_page_dir_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
 */
 paddr_t vaddr2paddr(vaddr_t vaddr, vaddr_t page_dir);
 
-//add_page_dir_entry(vaddr_t addr);
-
-//add_page_table_entry();
 
 
+/*
+@brief 设置页目录项
+@param vaddr:vaddr_t: 页目录对应的某个虚拟地址
+@param paddr:paddr_t: 物理地址，推荐4K对齐
+@param page_dir: vaddr_t: 页目录的虚拟地址
+@param page_attr: uint32_t: 页属性
+*/
+void set_page_dir_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t page_attr);
 
+
+
+#define ERROR_PAGE_TABLE_UNEXIST -1
+/*
+@brief 设置页目录项
+@param vaddr:vaddr_t: 页表项对应的某个虚拟地址
+@param paddr:paddr_t: 物理地址，推荐4K对齐
+@param page_dir: vaddr_t: 页目录的虚拟地址
+@param page_attr: uint32_t: 页属性
+@return error_code_t 成功返回NOERROR
+*/
+error_code_t set_page_table_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t page_attr);
 #endif

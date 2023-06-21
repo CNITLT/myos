@@ -17,4 +17,10 @@ typedef uint64_t size_t;
 typedef void* vaddr_t;
 typedef void* paddr_t;
 typedef void* addr_t;
+typedef uint32_t uintaddr_t;
+typedef uint32_t uintptr_t;
+typedef int32_t error_code_t;
+
+//无错误返回0，固定，具体错误码自定义
+#define NOERROR 0
 #endif

@@ -29,20 +29,19 @@ int main(){
     close_interrupt();
 */
     print_e820_table();
-    
-    pmemeory_pool_init();
+    memory_pool_init();
+
     addr_t addr;
-    size_t count;
-    do{
-        addr = pmalloc_page(0x100000/4096);
-        put_int(count);
-        count++;
-        put_str(":");
-        put_hex((uint32_t)addr);
-        put_str("\n");
-    }while(addr);
-    put_hex((uint32_t)&addr);
     while(1){ 
+        addr = malloc_page((vaddr_t)KERNEL_HEAP_START_VADDR, 5, &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR);
+        
+        put_hex((uint32_t) addr);
+        put_str("\n");  
+        if(addr == NULL){
+            break;
+        }
+        free_page(addr, 1, &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR);
     }
+    while(1);
     return 0;
 }
