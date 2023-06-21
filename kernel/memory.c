@@ -9,10 +9,11 @@
 //内核虚拟内存池bitmap地址, 物理内存池在管理4GB的时候长度最大，需要的bitmap最大长度是128kb
 #define KERNEL_VMEMORY_POOL_BITMAP_ADDR (PHMEMORY_POOL_BITMAP_ADDR + 128 * 1024)
 
+#define KERNEL_HEAP_START_VADDR 0xC0800000
 
 
 static memory_pool ph_memory_pool;
-memory_pool kernel_vmemory_pool;
+static memory_pool kernel_vmemory_pool;
 void* __alloca(size_t size){
     assert(size != 0);
     //调用函数的时候看了反汇编是先sub $12,%%esp, 再push,用16字节对齐了栈，等价于传了16字节的参数，但也看了下其他的函数调用，又没对齐栈
@@ -114,7 +115,7 @@ void pfree_page(paddr_t paddr, size_t page_count){
 }
 
 
-vaddr_t malloc_page(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemory_pool, vaddr_t page_dir){
+vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemory_pool, vaddr_t page_dir,uint32_t page_attr){
     paddr_t paddr = pmalloc_page(page_count);
     if(paddr == NULL){
         put_str("pmalloc_page faild!\n");
@@ -148,16 +149,16 @@ vaddr_t malloc_page(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemo
         page* p_page_dir_entry = get_page_dir_entry_vaddr(t_vaddr, page_dir);
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
             //说明没有对应的页表，映射一个页表
-            set_page_dir_entry(t_vaddr, (paddr_t)((uintaddr_t)table_paddr + PAGE_SIZE * table_paddr_index ), page_dir, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_SYS);//todo:: 属性这里还需要之后会有用户进程的分配
+            set_page_dir_entry(t_vaddr, (paddr_t)((uintaddr_t)table_paddr + PAGE_SIZE * table_paddr_index ), page_dir, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_SYS);//页表的对应的物理页只能系统访问，这里可以固定这些属性
             table_paddr_index++;
         }
-        set_page_table_entry(t_vaddr, t_paddr, page_dir, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_SYS);
+        set_page_table_entry(t_vaddr, t_paddr, page_dir, page_attr);
     }
     return vaddr;
 }
 
 
-void free_page(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir){
+void free_page_core(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir){
     for(size_t i = 0; i < page_count; i++){
         vaddr_t t_vaddr = (vaddr_t)((uintaddr_t)vaddr + i * PAGE_SIZE);
         page* p_page_table_entry = get_page_table_entry_vaddr(t_vaddr, page_dir);
@@ -165,4 +166,16 @@ void free_page(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, v
         set_page_table_entry(t_vaddr, NULL, page_dir, PAGE_P_ATTR_UNEXIST);
     }
     free_page_from_pool(vaddr, page_count, p_vmemory_pool); 
+}
+
+
+vaddr_t malloc_kernel_page(size_t page_count){
+    return malloc_page_core((vaddr_t)KERNEL_HEAP_START_VADDR, page_count, 
+    &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR, 
+    PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_SYS);
+}
+
+
+void free_kernel_page(vaddr_t vaddr, size_t page_count){
+     free_page_core(vaddr, page_count, &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR);
 }

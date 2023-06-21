@@ -14,7 +14,7 @@ typedef struct memory_pool{
     size_t used;//已分配字节数
     bitmap bmap;
 }memory_pool;
-extern memory_pool kernel_vmemory_pool;
+
 /*
 @brief 在栈上分配空间
 @param size:size_t: 需要分配的内存大小
@@ -75,9 +75,10 @@ void pfree_page(paddr_t paddr, size_t page_count);
 @param page_count:size_t: 分配的页数量
 @param p_vmemory_pool:memory_pool*:进程对应的虚拟内存池
 @param page_dir:vaddr_t: 进程对应的页目录虚拟地址
+@param page_attr:uint32_t: 页属性
 @return vaddr_t 分配后的页虚拟首地址，分配失败返回NULL
 */
-vaddr_t malloc_page(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemory_pool, vaddr_t page_dir);
+vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemory_pool, vaddr_t page_dir, uint32_t page_attr);
 
 /*
 @brief 从虚拟内存池和物理内存池释放vaddr对应的页为起点开始的page_count个页，并解除页目录和页表里的映射关系
@@ -86,7 +87,22 @@ vaddr_t malloc_page(vaddr_t start_vaddr, size_t page_count, memory_pool* p_vmemo
 @param p_vmemory_pool:memory_pool*: 对应的虚拟内存池地址
 @param page_dir:vaddr_t: 页目录地址
 */
-void free_page(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir);
+void free_page_core(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir);
 
 
+
+/*
+@brief 专门为内核分配页的malloc_page函数
+@param page_count:size_t: 需要分配页的数目
+@return vaddr_t 分配后的页虚拟首地址，分配失败返回NULL
+*/
+vaddr_t malloc_kernel_page(size_t page_count);
+
+
+/*
+@brief 专门为释放内核页的free_page函数
+@param vaddr_t:vaddr_t: 起点页内的任意虚拟内存地址
+@param page_count:size_t: 从vaddr_t开始的页计数，要释放的页数目
+*/
+void free_kernel_page(vaddr_t vaddr, size_t page_count);
 #endif

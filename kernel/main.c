@@ -19,28 +19,29 @@ void timer_interrupt(void){
 }
 
 int main(){
-    /*
+    
     clear_screen();
     set_cursor_loc(0);
+    print_e820_table();
+
     init_all();
     register_interrupt_func(0x20, timer_interrupt);
-   
+    memory_pool_init();
     //open_interrupt();
     close_interrupt();
-*/
-    print_e820_table();
-    memory_pool_init();
+
+   
 
     addr_t addr;
     while(1){ 
-        addr = malloc_page((vaddr_t)KERNEL_HEAP_START_VADDR, 5, &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR);
+        addr = malloc_kernel_page(1);
         
         put_hex((uint32_t) addr);
         put_str("\n");  
         if(addr == NULL){
             break;
         }
-        free_page(addr, 1, &kernel_vmemory_pool, (vaddr_t)KERNEL_PAGE_DIR_VADDR);
+        free_kernel_page(addr,1);
     }
     while(1);
     return 0;
