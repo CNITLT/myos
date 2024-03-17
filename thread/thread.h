@@ -1,0 +1,144 @@
+#ifndef __THREAD_THREAD_H
+#define __THREAD_THREAD_H
+#include "stdint.h"
+#include "list.h"
+#include "stddef.h"
+#define STACK_OVERFLOW_MAGIC_NUM 0xCCCCCCCC
+//通用线程函数类型
+typedef void thread_func(void*);
+//该类型的指针
+typedef thread_func* p_thread_func;
+
+enum task_status{
+    TASK_RUNNING, //运行状态
+    TASK_READY, //就绪状态
+    TASK_BLOCKED, //阻塞状态
+    TASK_WAITING, 
+    TASK_HANGING, 
+    TASK_DIED
+};
+
+
+
+/***********   中断栈intr_stack   ***********
+ * 此结构用于中断发生时保护程序(线程或进程)的上下文环境:
+ * 进程或线程被外部中断或软中断打断时,会按照此结构压入上下文
+ * 寄存器,  intr_exit中的出栈操作是此结构的逆操作
+ * 此栈在线程自己的内核栈中位置固定,所在页的最顶端
+********************************************/
+struct interrupt_stack {
+    uint32_t interrupt_num;	 // kernel.S 宏VECTOR中push %1压入的中断号
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t esp_dummy;	 // 虽然pushad把esp也压入,但esp是不断变化的,所以这个值其实没什么用，即使弹出到了esp也马上会被后续的pop过程修改
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+    uint32_t gs;
+    uint32_t fs;
+    uint32_t es;
+    uint32_t ds;
+
+/* 以下由cpu从低特权级进入高特权级时压入 */
+    uint32_t err_code;		 // err_code会被压入在eip之后
+    void (*eip) (void);
+    uint32_t cs;
+    uint32_t eflags;
+    void* esp;
+    uint32_t ss;
+};
+
+/***********  线程栈thread_stack  ***********
+ * 线程自己的栈,用于存储线程中待执行的函数
+ * 此结构在线程自己的内核栈中位置不固定,
+ * 用在switch_to时保存线程环境。
+ * 实际位置取决于实际运行情况。
+ ******************************************/
+struct thread_stack {
+   /*这些寄存器ebp,ebx,edi,esi和 esp 归主调函数所用，其余的寄存器归被调函数所用 
+   换句话说，不管被调函数中是否使用了这个寄存器，在被调函数执行完后，这个寄存器的值不该被改变 
+   因此被调函数必须为主调函数保护好这个寄存器的值，
+   在被调函数运行完之后，这个寄存器的值必须和运行前一样，它必须在自己的栈中存储这些寄存器的值*/
+   uint32_t ebp;
+   uint32_t ebx;
+   uint32_t edi;
+   uint32_t esi;
+   //uint32_t esp 不需要保存这个，这个随栈的变化保证
+
+/* 线程第一次执行时,eip指向待调用的函数kernel_thread 
+其它时候,eip是指向switch_to的返回地址*/
+   void (*eip) (thread_func* func, void* func_arg);
+
+/*****   以下仅供第一次被调度上cpu时使用   ****/
+
+/* 参数unused_ret只为占位置充数为返回地址 */
+   void (*unused_retaddr);
+   p_thread_func function;   // 由Kernel_thread所调用的函数名
+   void* func_arg;    // 由Kernel_thread所调用的函数所需的参数
+};
+
+/* 进程或线程的pcb,程序控制块 */
+struct task_struct {
+   vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈
+   enum task_status status;
+   uint8_t priority;		 // 线程优先级
+   char name[16];
+
+   uint8_t ticks;//剩余可运行的时钟滴答数
+   uint32_t elapsed_ticks;//总共运行了的时种滴答数
+   struct list_node general_tag;//一般队列中的节点
+   struct list_node all_list_tag;//总队列中的节点
+   vaddr_t page_dir;//页目录地址
+   uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
+};
+
+
+/*
+@brief 在初始化后的PCB上填充线程要运行的函数信息
+
+*/
+void thread_create(struct task_struct* pcb, thread_func function, void* func_arg);
+
+/*
+@brief 初始化pcb的基本信息
+@param pcb: task_struct* :pcb指针
+@param name: char *: 线程名
+@param priority: int : 线程优先级
+*/
+void init_pcb(struct task_struct* pcb, char* name, int priority);
+
+
+/*
+@brief 运行一个线程
+@param name: char* :不超过15字节的名称
+@param priority: int :优先级
+@param function: thread_func :要运行的函数
+@param func_arg: void* :函数参数
+
+*/
+struct task_struct* thread_start(char* name, int priority, thread_func function, void* func_arg);
+
+/*
+@brief 获取当前运行线程的PCB地址，原理是因为线程运行栈和PCB都在一个页上，且页的最低地址就是PCB的首地址
+@return struct task_struct*: PCB地址
+*/
+struct task_struct* get_current_pcb(void);
+
+
+/*
+@brief 初始化线程运行的控制信息并运行一个最初的线程
+@param main_function: thread_func :要运行的函数
+@param func_arg: void* :函数参数
+*/
+void init_thread_boot(thread_func main_function, void* func_arg);
+
+
+/*
+@brief 线程调度函数，需要注册到时钟中断上
+*/
+void schedule();
+
+
+#endif

@@ -2,6 +2,9 @@
 #include "print.h"
 #include "io.h"
 #include "stddef.h"
+#include "thread.h"
+#include "debug.h"
+
 //中断门描述符定义
 typedef struct interrupt_gate_desc{
     uint16_t func_offset_low; //中断处理程序在目标代码段的偏移中的低16位
@@ -33,11 +36,17 @@ NAKEDFUNC static void  IDT_FUNC_ENTRY_PROXY##INTERRUPT_NUM(void){ \
     push %es; \
     push %fs; \
     push %gs; \
-    pushal;"); \
-    put_int(INTERRUPT_NUM);\
+    pusha;"); /*PUSHA指令压入32位寄存器,其入栈顺序是: EAX,ECX,EDX,EBX,ESP,EBP,ESI,EDI*/\
+    /*put_int(INTERRUPT_NUM);这行就先不要了 \*/ \
+    asm volatile(" \
+    push %0 \
+    "::"Ni"(INTERRUPT_NUM)); \
     asm volatile(" \
     call *%0; \
     "::"m"(IDT_FUNCS[INTERRUPT_NUM]), "Ni"(INTERRUPT_NUM)); \
+    asm volatile(" \
+    add $4, %esp \
+    "); \
     asm volatile(" \
     push %eax; \
     movb $0x20, %al; \
@@ -46,7 +55,7 @@ NAKEDFUNC static void  IDT_FUNC_ENTRY_PROXY##INTERRUPT_NUM(void){ \
     pop %eax; \
     "); \
     asm volatile(" \
-    popal; \
+    popa; \
     pop %gs; \
     pop %fs; \
     pop %es; \
@@ -222,8 +231,10 @@ static void pic_init(void){
 }
 
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func){
+    interrupt_state old = close_interrupt();
     interrupt_func_handler old_handler = IDT_FUNCS[INTERRUPT_NUM];
     IDT_FUNCS[INTERRUPT_NUM] = func;
+    set_interrupt_state(old);
     return old_handler; 
 }
 
@@ -296,3 +307,19 @@ interrupt_state set_interrupt_state(interrupt_state state){
 }
 
 
+static uint64_t global_tick = 0;
+void timer_interrupt(void){
+    struct task_struct* pcb = get_current_pcb();
+    global_tick++;
+    /*
+    put_str("\nglobal_tick:");
+    put_int(global_tick);
+    put_str("\n");
+    */
+    assert(pcb->stack_magic == STACK_OVERFLOW_MAGIC_NUM);
+    pcb->ticks--;
+    pcb->elapsed_ticks++;
+    if(pcb->ticks <= 0){
+        schedule();
+    }
+}

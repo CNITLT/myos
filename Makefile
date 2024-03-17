@@ -2,14 +2,14 @@ dd=dd of=./c.img bs=512 conv=notrunc
 AS = nasm
 ASFLAGS = -I./boot/include -I./boot
 CC = gcc
-CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -nostdinc -nostdlib -m32 -c -fno-builtin  
+CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -I./thread -nostdinc -nostdlib -m32 -c -fno-builtin  
 LD = ld
 ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
 BUILD_DIR=./build
 
 OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,\
-$(notdir $(wildcard ./kernel/*.c ./device/*.c ./lib/*.c ./lib/kernel/*.c)))
+$(notdir $(wildcard ./kernel/*.c ./device/*.c ./lib/*.c ./lib/kernel/*.c ./thread/*.c)))
 
 
 .PHONY:all
@@ -43,6 +43,10 @@ $(BUILD_DIR)/%.o:./lib/kernel/%.c
 #----------device--------
 $(BUILD_DIR)/%.o:./device/%.c 
 	$(CC) $(CFLAGS) $< -o $@
+
+#----------thread--------
+$(BUILD_DIR)/%.o:./thread/%.c 
+	$(CC) $(CFLAGS) $< -o $@	
 
 .PHONY:clean
 clean:

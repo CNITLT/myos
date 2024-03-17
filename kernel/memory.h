@@ -6,7 +6,6 @@
 #define ALIGN_SIZE 4
 #define ALIGN(x,size) ((x+size - 1) & ~(size-1))
 #define ALIGN_DOWN(x,size) (x & ~(size-1))
-#define KERNEL_HEAP_START_VADDR 0xC0800000
 
 typedef struct memory_pool{
     size_t start;//内存起点

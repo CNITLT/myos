@@ -47,4 +47,9 @@ interrupt_state close_interrupt();
 */
 interrupt_state set_interrupt_state(interrupt_state state);
 
+
+/*
+@brief 时钟中断函数
+*/
+void timer_interrupt(void);
 #endif

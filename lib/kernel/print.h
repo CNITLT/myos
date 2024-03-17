@@ -9,7 +9,11 @@
 #define VGA_CRT_CURSOR_LOW  0x0F //CRT里光标低8位寄存器
 #define VGA_CRT_CURSOR_HIGH  0x0E //CRT里光标高8位寄存器
 
-
+/*
+@brief 获取显存字符模式下对应的虚拟地址起点
+@return vaddr_t 显存虚拟地址起点
+*/
+vaddr_t get_vga_txt_mode_start_addr();
 /*
 @brief 在当前光标位置输出一个字符
 @param ch:char 输出的字符
