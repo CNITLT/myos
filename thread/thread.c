@@ -15,7 +15,7 @@ struct list thread_all_list;//总队列
 static void kernel_thread(thread_func* function, void* func_arg) {
 /* 执行function前要开中断,避免后面的时钟中断被屏蔽,而无法调度其它线程 */
    open_interrupt();
-   //发送中断结束命令EOI
+   //发送中断结束命令EOI,不然从中断切换线程后，E820不会再发时钟中断，等价于没开中断，会一直运行切换后的线程
    outb(0xa0, 0x20);
    outb(0x20, 0x20);
    function(func_arg); 
@@ -115,6 +115,7 @@ void init_thread_boot(thread_func main_function, void* func_arg){
 
 /* 实现任务调度 */
 void schedule() {
+    //不在内部关中断，是因为用这个函数的时候在外部关，换线程后，还有机会换回来，然后在外部开
     assert(get_interrupt_state() == INTERRUPT_DISABLE);
    struct task_struct* cur = get_current_pcb(); 
    if (cur->status == TASK_RUNNING) { // 若此线程只是cpu时间片到了,将其加入到就绪队列尾
@@ -130,17 +131,22 @@ void schedule() {
 
     
    // clear_screen();
+   
+   
+   //调试部分
+   /*
     put_str("debug:\n");
     put_hex(cur);
     put_str("\n"); 
     put_hex(next);
     put_str("\n");
-for(int i = 0;i<1024*1024;i++){
-    for(int j = 0; j < 100;j++){
+    for(int i = 0;i<1024*1024;i++){
+        for(int j = 0; j < 100;j++){
 
+        }
     }
-}
-
+    */
+    /*
     static int count = 0;
     if(!count){
         put_str("count addr:");
@@ -148,6 +154,38 @@ for(int i = 0;i<1024*1024;i++){
         put_str("\n"); 
     }
     count++;
+    */
    next->status = TASK_RUNNING;
    switch_to(cur, next);
+}
+
+
+void thread_block(task_status status){
+    //只能取这三种状态
+    assert(status == TASK_BLOCKED || status == TASK_HANGING || status == TASK_WAITING);
+    interrupt_state old_state = close_interrupt();
+    struct task_struct* pcb = get_current_pcb();
+    pcb->status = status;
+    schedule();
+    set_interrupt_state(old_state);
+}
+
+
+void thread_unblock(struct task_struct* pcb){
+    assert(pcb->status == TASK_BLOCKED || pcb->status == TASK_HANGING || pcb->status == TASK_WAITING);
+    interrupt_state old_state = close_interrupt();
+    if(pcb->status != TASK_READY){
+        assert(!find_node(&thread_ready_list, &pcb->general_tag));
+        pcb->status = TASK_READY;
+        list_push_back(&thread_ready_list, &pcb->general_tag);
+    }
+    set_interrupt_state(old_state);
+}
+
+void thread_yield(){
+    struct task_struct* pcb = get_current_pcb();
+    assert(pcb->status == TASK_RUNNING);
+    interrupt_state old_state = close_interrupt();
+    schedule();
+    set_interrupt_state(old_state); 
 }

@@ -9,14 +9,14 @@ typedef void thread_func(void*);
 //该类型的指针
 typedef thread_func* p_thread_func;
 
-enum task_status{
+typedef enum task_status{
     TASK_RUNNING, //运行状态
     TASK_READY, //就绪状态
     TASK_BLOCKED, //阻塞状态
     TASK_WAITING, 
     TASK_HANGING, 
     TASK_DIED
-};
+} task_status;
 
 
 
@@ -136,9 +136,24 @@ void init_thread_boot(thread_func main_function, void* func_arg);
 
 
 /*
-@brief 线程调度函数，需要注册到时钟中断上
+@brief 线程调度函数，调用前需要关中断，使用后要开中断
 */
 void schedule();
 
+/*
+@brief 阻塞当前线程，并将状态设置为status,只能用 TASK_BLOCKED , TASK_HANGING, TASK_WAITING这三种状态
+@param status: task_status : 阻塞后的线程状态
+*/
+void thread_block(task_status status);
 
+/*
+@brief 解除某个线程的阻塞状态
+@param pcb: struct task_struct* : 某个线程的PCB指针
+*/
+void thread_unblock(struct task_struct* pcb);
+
+/*
+@brief 当前线程主动放弃CPU
+*/
+void thread_yield();
 #endif

@@ -8,6 +8,7 @@
 #include "page.h"
 #include "stddef.h"
 #include "thread.h"
+#include "mutex.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -17,53 +18,47 @@ void thread2(void *args){
     put_hex(thread2);
     put_str("\n");
     while(1){
-        put_str("thread2\n");
-        put_hex((size_t)get_current_pcb());
+        lock(args);
+        put_str("thread2 lock\n");
+        //put_hex((size_t)get_current_pcb());
         put_str("\n");
-        put_int(get_interrupt_state());
-        put_str("\n");
-
+        for(int i = 0;i<1024*512;i++){} 
+        put_str("thread2 unlock\n");
+        unlock(args);
+        thread_yield();
         for(int i = 0;i<1024*512;i++){
-           
+          
         }
-    }
-}
-void thread3(void *args){
-    put_str("thread3 eip:");
-    put_hex(thread3);
-    put_str("\n");
-    while(1){
-        put_str("thread3\n");
-        put_hex((size_t)get_current_pcb());
-        put_str("\n");
-        put_int(get_interrupt_state());
-        put_str("\n");
-
-        for(int i = 0;i<1024*512;i++){
-            
-        }
+        
+        
     }
 }
 
 void init_thread(void *args){
 
     close_interrupt();
-    thread_start("thread2",10,thread2,NULL);
-    thread_start("thread3",10,thread3,NULL);
+    thread_start("thread2",10,thread2,args);
+    
     open_interrupt();
 
     put_str("init_thread eip:");
     put_hex(init_thread);
     put_str("\n");
-
+    
     while(1){
-        put_str("init thread\n");
-        put_hex((size_t)get_current_pcb());
+        lock(args);
+        put_str("init thread lock\n");
+        //put_hex((size_t)get_current_pcb());
         put_str("\n");
-        //put_str("init thread\n");
+        for(int i = 0;i<1024*512;i++){
+            for(int j =0;j<5*100;j++){}
+        } 
+        put_str("init thread unlock\n");
+        unlock(args);
+        thread_yield();
         
         for(int i = 0;i<1024*512;i++){
-            
+           
         }
         
         
@@ -82,8 +77,10 @@ int main(){
     close_interrupt();
     register_interrupt_func(0x20, timer_interrupt); 
     //open_interrupt();
-    
-    init_thread_boot(init_thread, NULL);
+    struct mutex mutex;
+    mutex_init(&mutex);
+     
+    init_thread_boot(init_thread, &mutex);
 
    
     while(1);
