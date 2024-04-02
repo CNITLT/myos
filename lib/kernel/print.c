@@ -1,7 +1,11 @@
 #include "print.h"
 #include "io.h"
+#include "stdarg.h"
+#include "debug.h"
+#include "mutex.h"
 
 
+static struct mutex pf_mutex;
 
 vaddr_t get_vga_txt_mode_start_addr(){
     return (vaddr_t)VGA_TXT_MODE_START_ADDR;
@@ -143,4 +147,84 @@ void clear_screen(){
         }
     }
     set_cursor_loc(0);
+}
+
+
+void printf(const char * p,...){
+
+    va_list ap;
+    va_start(ap, p);
+  
+    while(*p){
+        char c = *p;
+        if(c != '%'){
+            put_char(c);
+            p++;
+            continue;
+        }
+        else{
+            p++;
+            c = *p;
+            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x');
+            if(c == '%'){
+                put_char('%'); 
+            }
+            else if(c == 'd'){
+                int num = va_arg(ap, int);
+                put_int(num);
+            }
+            else if (c == 's'){
+                char * p_str = va_arg(ap, char *);
+                put_str(p_str);
+            }
+            else if(c == 'x'){
+                uint32_t numx = va_arg(ap, uint32_t);
+                put_hex(numx);
+            }
+            ++p;   
+        }
+    }
+    va_end(ap);
+}
+
+void console_init(){
+    mutex_init(&pf_mutex);
+}
+
+void sync_printf(const char * p,...){
+    lock(&pf_mutex);
+    va_list ap;
+    va_start(ap, p);
+  
+    while(*p){
+        char c = *p;
+        if(c != '%'){
+            put_char(c);
+            p++;
+            continue;
+        }
+        else{
+            p++;
+            c = *p;
+            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x');
+            if(c == '%'){
+                put_char('%'); 
+            }
+            else if(c == 'd'){
+                int num = va_arg(ap, int);
+                put_int(num);
+            }
+            else if (c == 's'){
+                char * p_str = va_arg(ap, char *);
+                put_str(p_str);
+            }
+            else if(c == 'x'){
+                uint32_t numx = va_arg(ap, uint32_t);
+                put_hex(numx);
+            }
+            ++p;   
+        }
+    }
+    va_end(ap); 
+    unlock(&pf_mutex);
 }

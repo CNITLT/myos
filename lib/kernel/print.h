@@ -9,6 +9,13 @@
 #define VGA_CRT_CURSOR_LOW  0x0F //CRT里光标低8位寄存器
 #define VGA_CRT_CURSOR_HIGH  0x0E //CRT里光标高8位寄存器
 
+
+
+
+/*
+@brief 初始化打印功能,主要是用来初始化锁
+*/
+void console_init();
 /*
 @brief 获取显存字符模式下对应的虚拟地址起点
 @return vaddr_t 显存虚拟地址起点
@@ -49,6 +56,10 @@ void put_hex64(uint64_t num);
 void clear_screen();
 
 /*
+@brief 原printf的仿制品，仅支持 %d %s %x
+*/
+void printf(const char * p,...);
+/*
 @brief 读取当前的光标位置
 @return uint32_t 光标位置
 */
@@ -64,5 +75,11 @@ void set_cursor_loc(uint32_t pos);
 @brief 向上滚动一行屏幕
 */
 void roll_up();
+
+/*
+@brief 对输出加锁的printf，保证输出顺序不乱
+*/
+void sync_printf(const char * p,...);
+
 
 #endif

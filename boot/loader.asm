@@ -83,6 +83,7 @@ pe_mode_start:
     ;刷新其它的选择子
     mov ax, GDT_SELECTOR_DATA
     mov ds, ax
+    mov fs, ax
     mov es, ax
     mov gs, ax
     mov ss, ax

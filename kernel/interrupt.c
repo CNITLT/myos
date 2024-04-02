@@ -4,7 +4,7 @@
 #include "stddef.h"
 #include "thread.h"
 #include "debug.h"
-
+#include "init.h"
 //中断门描述符定义
 typedef struct interrupt_gate_desc{
     uint16_t func_offset_low; //中断处理程序在目标代码段的偏移中的低16位
@@ -20,7 +20,7 @@ typedef struct interrupt_gate_desc{
 } interrupt_gate_desc;
 
 #define DEFAULT_INTERRUPT_GATE_DESC_VALUE {0,(1 << 3),{0x600,1,0,0,1},0}
-#define IDT_SIZE 41
+#define IDT_SIZE 48
 
 
 #define ERROR_CODE_RET asm volatile("addl $4,%esp;iret;");
@@ -37,7 +37,7 @@ NAKEDFUNC static void  IDT_FUNC_ENTRY_PROXY##INTERRUPT_NUM(void){ \
     push %fs; \
     push %gs; \
     pusha;"); /*PUSHA指令压入32位寄存器,其入栈顺序是: EAX,ECX,EDX,EBX,ESP,EBP,ESI,EDI*/\
-    /*put_int(INTERRUPT_NUM);这行就先不要了 \*/ \
+    /*put_int(INTERRUPT_NUM); */ \
     asm volatile(" \
     push %0 \
     "::"Ni"(INTERRUPT_NUM)); \
@@ -108,6 +108,15 @@ IDT_FUNC_ENTRY_PROXY(37,DEFAULT_RET)
 IDT_FUNC_ENTRY_PROXY(38,DEFAULT_RET)
 IDT_FUNC_ENTRY_PROXY(39,DEFAULT_RET)
 IDT_FUNC_ENTRY_PROXY(40,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(41,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(42,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(43,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(44,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(45,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(46,DEFAULT_RET)
+IDT_FUNC_ENTRY_PROXY(47,DEFAULT_RET)
+
+
 
 interrupt_func_handler IDT_ENTRY_PROXYS[IDT_SIZE] = {
    IDT_FUNC_ENTRY_PROXY0,
@@ -150,7 +159,14 @@ interrupt_func_handler IDT_ENTRY_PROXYS[IDT_SIZE] = {
    IDT_FUNC_ENTRY_PROXY37,
    IDT_FUNC_ENTRY_PROXY38,
    IDT_FUNC_ENTRY_PROXY39,
-   IDT_FUNC_ENTRY_PROXY40
+   IDT_FUNC_ENTRY_PROXY40,
+   IDT_FUNC_ENTRY_PROXY41,
+   IDT_FUNC_ENTRY_PROXY42,
+   IDT_FUNC_ENTRY_PROXY43,
+   IDT_FUNC_ENTRY_PROXY44,
+   IDT_FUNC_ENTRY_PROXY45,
+   IDT_FUNC_ENTRY_PROXY46,
+   IDT_FUNC_ENTRY_PROXY47
 }; //代理函数的地址
 
 
@@ -226,8 +242,11 @@ static void pic_init(void){
    outb (PIC_8259A_SLAVE_ICW4_PORT, 0x01);    // ICW4: 8086模式, 正常EOI
 
    /* 打开主片上IR0,也就是目前只接受时钟产生的中断 */
-   outb (PIC_8259A_MASTER_OCW1_PORT, 0xfe);
+   //outb (PIC_8259A_MASTER_OCW1_PORT, 0xfe);
+    /*时钟与键盘中断*/
+   outb (PIC_8259A_MASTER_OCW1_PORT, 0xfc);
    outb (PIC_8259A_SLAVE_OCW1_PORT, 0xff);
+
 }
 
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func){
@@ -240,7 +259,13 @@ interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt
 
 //默认的中断其实就是打印一句话
 static void default_interrupt_func(void){
-    put_str("this is default interruput func\n");
+    uint32_t INTERRUPT_NUM;
+    asm volatile(" \
+    movl 8(%%ebp),%%eax; \
+    movl %%eax, %0; \
+    "::"m"(INTERRUPT_NUM):"memory");
+    INTERRUPT_NUM &= 0x000000FF;
+    printf("this is default interruput func interupt_num:%d\n",INTERRUPT_NUM);
 }
 
 //把所有中断注册为默认的
@@ -259,6 +284,7 @@ void interrupt_init(){
    uint64_t idt_operand = ((sizeof(IDT) - 1) | ((uint64_t)(uint32_t)IDT << 16));
    asm volatile("lidt %0" : : "m" (idt_operand));
 }
+
 
 
 #define EFLAGS_IF 0x200
