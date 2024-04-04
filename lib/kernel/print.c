@@ -165,7 +165,7 @@ void printf(const char * p,...){
         else{
             p++;
             c = *p;
-            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x');
+            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x' || c == 'c');
             if(c == '%'){
                 put_char('%'); 
             }
@@ -181,6 +181,10 @@ void printf(const char * p,...){
                 uint32_t numx = va_arg(ap, uint32_t);
                 put_hex(numx);
             }
+            else if(c == 'c'){
+                char param_char = va_arg(ap, char);
+                put_char(param_char);
+            } 
             ++p;   
         }
     }
@@ -206,7 +210,7 @@ void sync_printf(const char * p,...){
         else{
             p++;
             c = *p;
-            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x');
+            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x' || c == 'c');
             if(c == '%'){
                 put_char('%'); 
             }
@@ -221,6 +225,10 @@ void sync_printf(const char * p,...){
             else if(c == 'x'){
                 uint32_t numx = va_arg(ap, uint32_t);
                 put_hex(numx);
+            }
+            else if(c == 'c'){
+                char param_char = va_arg(ap, char);
+                put_char(param_char);
             }
             ++p;   
         }

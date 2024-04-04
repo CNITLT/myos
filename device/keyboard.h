@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "stddef.h"
 #include "io.h"
+#include "queue.h"
 
 
 /*
@@ -16,6 +17,12 @@ void keyboard_interupt(void);
 @brief 键盘中断初始化
 */
 void keyboard_init();
+
+/*
+@brief 从IO队列里面读取ascii码字符
+*/
+char read_ascii_from_keyboard_ioqueue();
+
 
 
 #endif

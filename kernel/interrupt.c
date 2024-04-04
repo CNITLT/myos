@@ -246,7 +246,6 @@ static void pic_init(void){
     /*时钟与键盘中断*/
    outb (PIC_8259A_MASTER_OCW1_PORT, 0xfc);
    outb (PIC_8259A_SLAVE_OCW1_PORT, 0xff);
-
 }
 
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func){
@@ -337,11 +336,8 @@ static uint64_t global_tick = 0;
 void timer_interrupt(void){
     struct task_struct* pcb = get_current_pcb();
     global_tick++;
-    /*
-    put_str("\nglobal_tick:");
-    put_int(global_tick);
-    put_str("\n");
-    */
+    
+    //sync_printf("global tick:%d\n", global_tick);
     assert(pcb->stack_magic == STACK_OVERFLOW_MAGIC_NUM);
     pcb->ticks--;
     pcb->elapsed_ticks++;

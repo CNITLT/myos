@@ -22,7 +22,7 @@ typedef uint32_t uintptr_t;
 typedef int32_t error_code_t;
 
 typedef uint8_t bool;
-
+typedef uint8_t Byte;
 //无错误返回0，固定，具体错误码自定义
 #define NOERROR 0
 #endif

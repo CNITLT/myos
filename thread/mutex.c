@@ -28,7 +28,7 @@ void semaphore_add(struct semaphore* p_semaphore){
         struct task_struct* pcb = elem2entry(struct task_struct, general_tag, node);
         thread_unblock(pcb);
     }
-  
+    set_interrupt_state(old_state);
 }
 
 
@@ -44,6 +44,7 @@ void semaphore_sub(struct semaphore* p_semaphore){
     }
     p_semaphore->value--;
     assert(p_semaphore->value>=0);
+    set_interrupt_state(old_state);
 }
 
 

@@ -9,48 +9,41 @@
 #include "stddef.h"
 #include "thread.h"
 #include "mutex.h"
+#include "keyboard.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
-void thread2(void *args){
-    
-    put_str("thread2 eip:");
-    put_hex(thread2);
-    put_str("\n");
+
+
+void thread1(void* args){
+    //open_interrupt();
+    sync_printf("thread1:%x interupt_state:%d\n", thread1, get_interrupt_state()); 
     while(1){
-        lock(args);
-        put_str("thread2 lock\n");
-        //put_hex((size_t)get_current_pcb());
-        put_str("\n");
-        for(int i = 0;i<1024*512;i++){} 
-        put_str("thread2 unlock\n");
-        unlock(args);
+        sync_printf("thread1:%x read:%c\n", thread1, read_ascii_from_keyboard_ioqueue()); 
+        thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
+    }
+}
+
+void thread2(void* args){
+    //open_interrupt();
+    sync_printf("thread2:%x interupt_state:%d\n", thread2, get_interrupt_state()); 
+    while(1){ 
+        sync_printf("thread2:%x read:%c\n", thread2, read_ascii_from_keyboard_ioqueue()); 
         thread_yield();
-        for(int i = 0;i<1024*512;i++){
-        }
     }
 }
 
 void init_thread(void *args){
-
     close_interrupt();
-    //thread_start("thread2",10,thread2,args);
-    
+    thread_start("thread1",1,thread1,NULL);
+    thread_start("thread2",1,thread2,NULL);
     open_interrupt();
-
-    put_str("init_thread eip:");
-    put_hex(init_thread);
-    put_str("\n");
+    sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     
-    while(1){
-        //sync_printf("init thread\n");
+    while(1){     
+        //sync_printf("init_thread:%x read:%c\n", init_thread, read_ascii_from_keyboard_ioqueue());  
         //thread_yield();
-        /*
-        for(int i = 0;i<1024*512;i++){  
-        }
-        */
     }
-    
 }
 
 
@@ -64,10 +57,7 @@ int main(){
     close_interrupt();
     register_interrupt_func(0x20, timer_interrupt); 
     //open_interrupt();
-    struct mutex mutex;
-    mutex_init(&mutex);
-  
-    init_thread_boot(init_thread, &mutex);
+    init_thread_boot(init_thread, NULL);
 
    
     while(1);

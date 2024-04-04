@@ -56,7 +56,7 @@ void put_hex64(uint64_t num);
 void clear_screen();
 
 /*
-@brief 原printf的仿制品，仅支持 %d %s %x
+@brief 原printf的仿制品，仅支持 %d %s %x %c
 */
 void printf(const char * p,...);
 /*

@@ -131,30 +131,7 @@ void schedule() {
 
     
    // clear_screen();
-   
-   
-   //调试部分
-   /*
-    put_str("debug:\n");
-    put_hex(cur);
-    put_str("\n"); 
-    put_hex(next);
-    put_str("\n");
-    for(int i = 0;i<1024*1024;i++){
-        for(int j = 0; j < 100;j++){
-
-        }
-    }
-    */
-    /*
-    static int count = 0;
-    if(!count){
-        put_str("count addr:");
-        put_hex(&count);
-        put_str("\n"); 
-    }
-    count++;
-    */
+   //printf("%x switch to %x\n", cur, next);
    next->status = TASK_RUNNING;
    switch_to(cur, next);
 }
