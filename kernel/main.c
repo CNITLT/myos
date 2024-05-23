@@ -10,6 +10,7 @@
 #include "thread.h"
 #include "mutex.h"
 #include "keyboard.h"
+#include "gdt.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -56,6 +57,14 @@ int main(){
     init_all();
     close_interrupt();
     register_interrupt_func(0x20, timer_interrupt); 
+    vaddr_t gdt = get_gdt_addr();
+    sync_printf("gdt base addr:0x%x\n", gdt);
+    vaddr_t new_gdt = malloc_kernel_page(1);
+    memcpy(new_gdt,gdt, 64 * 8);
+    struct gdt_ptr gdt_ptr;
+    gdt_ptr.base = new_gdt;
+    gdt_ptr.limit = 3*8 - 1;
+    set_gdt(&gdt_ptr);
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 

@@ -3,7 +3,7 @@
 #include "debug.h"
 
 void bitmap_init(bitmap* p_bitmap) {
-    memset(p_bitmap->bits, 0, p_bitmap->len_bit / 8);
+    memset(p_bitmap->bits, 0, (p_bitmap->len_bit + 7) / 8);
 }
 
 
