@@ -6,6 +6,7 @@
 #include "stdint.h"
 #include "print.h"
 #include "keyboard.h"
+#include "tss.h"
 void init_all(){
     interrupt_state old_state = close_interrupt();
     interrupt_init();
@@ -14,5 +15,6 @@ void init_all(){
     console_init();
     keyboard_init();
     set_interrupt_state(old_state);
+    init_tss();
 }
 

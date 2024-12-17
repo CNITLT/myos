@@ -11,6 +11,7 @@
 #include "mutex.h"
 #include "keyboard.h"
 #include "gdt.h"
+#include "tss.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -59,12 +60,19 @@ int main(){
     register_interrupt_func(0x20, timer_interrupt); 
     vaddr_t gdt = get_gdt_addr();
     sync_printf("gdt base addr:0x%x\n", gdt);
+    sync_printf("gdt limit:0x%x\n", get_gdt_limit());
+    sync_printf("sizeof(tss):%d\n", sizeof(struct tss));
+    pf_gdt_entry((struct gdt_entry *)get_gdt_addr()+1);
+    
+    
+    struct gdt_ptr old_gdt_ptr = get_gdt_ptr();
     vaddr_t new_gdt = malloc_kernel_page(1);
     memcpy(new_gdt,gdt, 64 * 8);
     struct gdt_ptr gdt_ptr;
     gdt_ptr.base = new_gdt;
-    gdt_ptr.limit = 3*8 - 1;
+    gdt_ptr.limit = old_gdt_ptr.limit;
     set_gdt(&gdt_ptr);
+    
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 
