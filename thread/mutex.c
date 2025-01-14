@@ -1,6 +1,6 @@
 #include "mutex.h"
 #include "debug.h"
-
+#include "thread.h"
 void semaphore_init(struct semaphore* p_semaphore, uint32_t value){
     p_semaphore->value = value;
     p_semaphore->max_value = value;

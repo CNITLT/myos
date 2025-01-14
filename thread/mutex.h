@@ -4,8 +4,9 @@
 #include "interrupt.h"
 #include "stddef.h"
 #include "stdint.h"
-#include "thread.h"
 
+
+struct task_struct;
 //信号量
 struct semaphore{
     uint32_t value;
@@ -13,7 +14,7 @@ struct semaphore{
     uint32_t max_value;
 };
 
-
+// 锁，同一线程可重入
 struct mutex
 {
     struct task_struct* holder;//持有者线程的PCB

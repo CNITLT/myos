@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "list.h"
 #include "stddef.h"
+#include "memory.h"
 #define STACK_OVERFLOW_MAGIC_NUM 0xCCCCCCCC
 //通用线程函数类型
 typedef void thread_func(void*);
@@ -83,14 +84,15 @@ struct thread_stack {
 struct task_struct {
    vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈
    enum task_status status;
-   uint8_t priority;		 // 线程优先级
+   uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
    char name[16];
 
    uint8_t ticks;//剩余可运行的时钟滴答数
    uint32_t elapsed_ticks;//总共运行了的时种滴答数
    struct list_node general_tag;//一般队列中的节点
    struct list_node all_list_tag;//总队列中的节点
-   vaddr_t page_dir;//页目录地址
+   vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址
+   memory_pool vmemory_pool; // 用于标记虚拟地址空间池
    uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
 };
 

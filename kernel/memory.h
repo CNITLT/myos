@@ -3,16 +3,19 @@
 #include "stdint.h"
 #include "bitmap.h"
 #include "e820.h"
+#include "mutex.h"
 #define ALIGN_SIZE 4
 #define ALIGN(x,size) ((x+size - 1) & ~(size-1))
 #define ALIGN_DOWN(x,size) (x & ~(size-1))
+
 
 typedef struct memory_pool{
     size_t start;//内存起点
     size_t length; //长度单位字节
     size_t used;//已分配字节数
+    struct mutex lock;
     bitmap bmap;
-}memory_pool;
+} memory_pool;
 
 /*
 @brief 在栈上分配空间
@@ -48,6 +51,12 @@ void pmemory_pool_init();
 @brief 初始化内核虚拟内存池
 */
 void kernel_vmemory_pool_init();
+
+/*
+@brief 初始化用户虚拟内存池，会自动malloc出一定的内核页存bitmap
+@param p_user_vmemory_pool: memory_pool* :内存池指针
+*/
+void user_vmemory_pool_init(memory_pool* p_user_vmemory_pool);
 
 /*
 @brief 物理内存池和内核虚拟内存池的初始化汇总。

@@ -2,7 +2,7 @@ dd=dd of=./c.img bs=512 conv=notrunc
 AS = nasm
 ASFLAGS = -I./boot/include -I./boot
 CC = gcc
-CFLAGS = -I./device -I./lib -I./lib/kernel -I./kernel -I./thread -I./userprog -nostdinc -nostdlib -m32 -c -fno-builtin  
+CFLAGS = -I./device -I./kernel -I./lib -I./lib/kernel  -I./thread -I./userprog -nostdinc -nostdlib -m32 -c -fno-builtin  
 LD = ld
 ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
@@ -19,6 +19,7 @@ all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/ker
 	$(dd) if=$(BUILD_DIR)/kernel.bin count=200 seek=9
 	readelf -h $(BUILD_DIR)/kernel.bin | grep 入口点
 	rm -rf c.img.lock
+	
 .PHONY:make_build_dir
 make_build_dir:
 	if [[ ! -d $(BUILD_DIR) ]];then mkdir $(BUILD_DIR);fi
