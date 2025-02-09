@@ -82,7 +82,7 @@ struct thread_stack {
 
 /* 进程或线程的pcb,程序控制块 */
 struct task_struct {
-   vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈
+   vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方
    enum task_status status;
    uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
    char name[16];
@@ -94,7 +94,24 @@ struct task_struct {
    vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址
    memory_pool vmemory_pool; // 用于标记虚拟地址空间池
    uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
+
+
+/*
+   PCB内存布局
+   高
+   -------
+   中断栈
+   ---------
+   线程运行栈
+   --------   <-----self_kernel_stack基本上指向这里
+   栈可用的留空空间
+   ---------
+   PCB成员数据
+   ---------
+   低
+*/
 };
+
 
 
 /*

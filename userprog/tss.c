@@ -5,7 +5,7 @@
 void init_tss(void){
     //设置g_tss
     g_tss.ss0 = GDT_SELECTOR_DATA;
-    g_tss.io_base = sizeof(struct tss);//超过GDT里的界限值则表面没有IO位图,下面的界限值是sizeof(struct tss)-1
+    g_tss.io_base = sizeof(struct tss);//超过GDT里的界限值则表明没有IO位图,下面的界限值是sizeof(struct tss)-1
     
     struct gdt_entry* p_gdt = (struct gdt_entry*)get_gdt_addr();
     struct gdt_entry* p_gdt_tss = p_gdt + 3;//设置第4个为TSS表项值

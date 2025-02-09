@@ -22,6 +22,13 @@ static void kernel_thread(thread_func* function, void* func_arg) {
 }
 
 NAKEDFUNC static void switch_to(struct task_struct* cur, struct task_struct* next){
+    //此时的栈
+    /*高地址， 一行代表4字节
+    next
+    cur
+    old_eip
+    低地址*/
+    //调用约定保证EAX可以直接用
     asm volatile(" \
     push %esi; \
     push %edi; \
@@ -29,7 +36,17 @@ NAKEDFUNC static void switch_to(struct task_struct* cur, struct task_struct* nex
     push %ebp; \
     movl 20(%esp), %eax; \
     movl %esp, (%eax); \
-    ");//cur = [esp+20]
+    "); //cur = [esp+20]
+    //上面代码主要作用就是 cur.self_kernel_stack = now_esp 
+    /*高地址， 一行代表4字节
+    next
+    cur (主要是访问这个self_kernel_stack，地址和cur一样,毕竟是第一个成员变量)
+    old_eip
+    old_esi
+    old_edi
+    old_ebx
+    old_ebp  <---esp
+    低地址*/
 
    asm volatile(" \
     movl 24(%esp), %eax; \
@@ -40,6 +57,7 @@ NAKEDFUNC static void switch_to(struct task_struct* cur, struct task_struct* nex
     pop %esi; \
     ret; \
     "); 
+    //上面这段代码主要作用就是 now_esp = next.self_kernel_stack
 }
 
 
