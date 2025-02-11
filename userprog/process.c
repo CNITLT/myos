@@ -31,18 +31,19 @@ void start_process(void* filename){
     struct task_struct* cur_pcb = get_current_pcb();
     //切换到中断栈进行操作，毕竟是进程要通过中断来跳转到用户态
     cur_pcb->self_kernel_stack = (uint32_t)cur_pcb->self_kernel_stack + sizeof(struct thread_stack);
-    struct interrupt_stack* intr_stack =  (struct interrupt_stack*)cur_pcb->self_kernel_stack;
-    memset(intr_stack, 0, sizeof(struct interrupt_stack));
-    intr_stack->ds = GDT_SELECTOR_USER_DATA;
-    intr_stack->es = GDT_SELECTOR_USER_DATA;
-    intr_stack->fs = GDT_SELECTOR_USER_DATA;
-    intr_stack->cs = GDT_SELECTOR_USER_CODE;
-    intr_stack->eip = function;
-    intr_stack->eflags = (EFLAGS_IOPL_0 | EFLAGS_IF_1 | EFLAGS_MBS);
-    intr_stack->esp = malloc_page_core(USER_STACK3_VADDR,1,&cur_pcb->vmemory_pool, PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);
-    intr_stack->ss = GDT_SELECTOR_USER_DATA;
-    debug("start_process end\n");
-    intr_exit();
+    struct interrupt_stack* p_intr_stack =  (struct interrupt_stack*)cur_pcb->self_kernel_stack;
+    memset(p_intr_stack, 0, sizeof(struct interrupt_stack));
+    p_intr_stack->ds = GDT_SELECTOR_USER_DATA;
+    p_intr_stack->es = GDT_SELECTOR_USER_DATA;
+    p_intr_stack->fs = GDT_SELECTOR_USER_DATA;
+    p_intr_stack->cs = GDT_SELECTOR_USER_CODE;
+    p_intr_stack->eip = function;
+    p_intr_stack->eflags = (EFLAGS_IOPL_0 | EFLAGS_IF_1 | EFLAGS_MBS);
+    p_intr_stack->esp = malloc_page_core(USER_STACK3_VADDR,1,&cur_pcb->vmemory_pool, PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);
+    p_intr_stack->ss = GDT_SELECTOR_USER_DATA;
+    //debug("start_process end\n");
+ 
+    intr_exit_from(p_intr_stack);
 }
 
 vaddr_t create_page_dir(void){
@@ -61,11 +62,11 @@ vaddr_t create_page_dir(void){
    //页目录的物理地址更新，这个每个进程都是独立的，所以不会影响到内核，且内核的二级页目录都是固定的，全部进程共享,修改也会被所有进程看到
    paddr_t page_dir_paddr = vaddr2paddr(page_dir_vaddr, PAGE_DIR_VADDR);
    /* 页目录地址是存入在页目录的最后一项,更新页目录地址为新页目录的物理地址 */
-   page* dir_entry = ((page*)page_dir_vaddr + 1023);
-   dir_entry->PADDR = PAGE_INDEX(page_dir_paddr);
-   dir_entry->US = PAGE_US_VALUE_USER;
-   dir_entry->RW = PAGE_RW_VALUE_RW;
-   dir_entry->P = PAGE_P_VALUE_EXIST;
+   page* p_dir_entry = ((page*)page_dir_vaddr + 1023);
+   p_dir_entry->PADDR = PAGE_INDEX(page_dir_paddr);
+   p_dir_entry->US = PAGE_US_VALUE_USER;
+   p_dir_entry->RW = PAGE_RW_VALUE_RW;
+   p_dir_entry->P = PAGE_P_VALUE_EXIST;
 
    return page_dir_vaddr;
 }

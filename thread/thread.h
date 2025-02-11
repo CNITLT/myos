@@ -29,7 +29,7 @@ typedef enum task_status{
  * 此栈在线程自己的内核栈中位置固定,所在页的最顶端
 ********************************************/
 struct interrupt_stack {
-    uint32_t interrupt_num;	 // kernel.S 宏VECTOR中push %1压入的中断号
+    uint32_t interrupt_num;	 //统一中断栈架构的中断号，部分没有中断号的中断会压入一个0，用以统一中断栈结构
     uint32_t edi;
     uint32_t esi;
     uint32_t ebp;

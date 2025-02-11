@@ -1,9 +1,10 @@
 #ifndef __KERNEL_INTERRUPT_H
 #define __KERNEL_INTERRUPT_H
 #include "stdint.h"
-
 //实际的中断函数类型
 typedef void (*interrupt_func_handler)(void);
+
+struct interrupt_stack;
 /*
 @brief 注册中断函数
 @param INTERRUPT_NUM:uint16_t 中断向量号
@@ -67,6 +68,7 @@ void timer_interrupt(void);
 |补充0|cs|
 |  eip   |
 |error_code| (可能是伪造的0) <----esp
+@param p_intr_stack: struct interrupt_stack*: 中断栈地址
 */
-void intr_exit(void);
+void intr_exit_from(struct interrupt_stack* p_intr_stack);
 #endif

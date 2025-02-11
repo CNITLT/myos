@@ -25,13 +25,22 @@ typedef struct interrupt_gate_desc{
 
 //#define ERROR_CODE_RET asm volatile("addl $4,%esp;iret;");
 //#define DEFAULT_RET asm volatile("iret;");
-//统一一下中断返回的方法，没中断码的会push一个伪造的0中断码进去，这样中断返回就能统一方法
+//统一一下中断返回的方法，没中断错误码的会push一个伪造的0中断错误码进去，这样中断返回就能统一方法
 #define INTR_RET asm volatile("addl $4,%esp;iret;");
 #define INTR_PUSH_FAKE_ERROR_CODE asm volatile("push $0;");
 #define INTR_NONE_PUSH
 
-NAKEDFUNC void intr_exit(void){
-    INTR_RET
+void intr_exit_from(struct interrupt_stack* p_intr_stack){
+    asm volatile("movl %0, %%esp"::"g"(p_intr_stack):"memory");
+    //与IDT_FUNC_ENTRY_PROXY里面的出栈顺序一直，不过不能忘了要addl $4, %esp;把中断号出站
+    asm volatile(" \
+        addl $4, %esp; \
+        popa; \
+        pop %gs; \
+        pop %fs; \
+        pop %es; \
+        pop %ds;"); \
+    INTR_RET;
 }
 
 //代理中断函数，主要用来处理返回到正确的地方,普通函数都是ret返回
