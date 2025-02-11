@@ -30,6 +30,9 @@ typedef struct interrupt_gate_desc{
 #define INTR_PUSH_FAKE_ERROR_CODE asm volatile("push $0;");
 #define INTR_NONE_PUSH
 
+NAKEDFUNC void intr_exit(void){
+    INTR_RET
+}
 
 //代理中断函数，主要用来处理返回到正确的地方,普通函数都是ret返回
 #define IDT_FUNC_ENTRY_PROXY(INTERRUPT_NUM, PUSH_TYPE) \
@@ -269,6 +272,7 @@ static void default_interrupt_func(void){
     movl %%eax, %0; \
     "::"m"(INTERRUPT_NUM):"memory");
     INTERRUPT_NUM &= 0x000000FF;
+    
     printf("this is default interruput func interupt_num:%d\n",INTERRUPT_NUM);
 }
 

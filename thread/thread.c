@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "debug.h"
 #include "io.h"
+#include "process.h"
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
 struct list thread_ready_list; //就绪队列
@@ -149,8 +150,12 @@ void schedule() {
 
     
    // clear_screen();
-   //printf("%x switch to %x\n", cur, next);
+   //debug("%x switch to %x\n", cur, next);
    next->status = TASK_RUNNING;
+   //debug("before activate cr3:%x\n",get_cr3_register());
+   process_activate(next);
+   //debug("after activate cr3:%x\n",get_cr3_register());
+   
    switch_to(cur, next);
 }
 

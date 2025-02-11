@@ -3,12 +3,6 @@
 #include "stddef.h"
 
 
-#define PAGE_DIR_INDEX(ADDR) (((uintaddr_t)ADDR>>22)&0x3FF)
-#define PAGE_TABLE_INDEX(ADDR) (((uintaddr_t)ADDR>>12)&0x3FF)
-
-#define PAGE_MASK(ADDR) ((uintaddr_t)ADDR & 0xFFF)
-#define PAGE_INDEX(ADDR) (((uintaddr_t)ADDR>>12)&0xFFFFF)
-
 page_vaddr_t get_page_table_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir){
     assert(PAGE_MASK(page_dir) == 0); //页目录地址是4KB对齐
     assert(PAGE_DIR_INDEX(page_dir) == PAGE_TABLE_INDEX(page_dir));//页目录和页表汇集在一起，且页目录指向自己的时候，地址一定会满足这个条件.
@@ -61,4 +55,18 @@ error_code_t set_page_table_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir
     *p_uint32_page_table_entry &= 0xFFFFF000;
     *p_uint32_page_table_entry |= (page_attr&0xFFF); 
     return NOERROR;
+}
+
+
+paddr_t set_cr3_register(paddr_t page_dir_paddr){
+    paddr_t old_cr3 = get_cr3_register();
+    asm volatile ("movl %0, %%cr3" : : "r" (page_dir_paddr) : "memory");
+    return old_cr3;
+}
+
+
+paddr_t get_cr3_register(){
+    paddr_t old_cr3 = NULL;
+    asm volatile("movl %%cr3, %0":"=g"(old_cr3)::"memory");
+    return old_cr3;
 }

@@ -1,7 +1,10 @@
 #ifndef __KERNEL_DEBUG_H
 #define __KERNEL_DEBUG_H
-
-
+#include "print.h"
+#define DEBUG_PF
+#ifdef DEBUG_PF
+#define debug(...) printf(__VA_ARGS__)
+#endif
 /*
 @brief 断言失败，打印信息使用
 */

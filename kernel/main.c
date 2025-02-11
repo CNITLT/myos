@@ -12,6 +12,7 @@
 #include "keyboard.h"
 #include "gdt.h"
 #include "tss.h"
+#include "process.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -35,10 +36,27 @@ void thread2(void* args){
     }
 }
 
+
+void process1(){
+    while(1){
+        sync_printf("process1\n"); 
+        //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
+    }
+}
+
+void process2(){
+    while(1){
+        sync_printf("process2\n"); 
+        //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
+    }
+}
+
 void init_thread(void *args){
     close_interrupt();
-    thread_start("thread1",1,thread1,NULL);
-    thread_start("thread2",1,thread2,NULL);
+    //thread_start("thread1",1,thread1,NULL);
+    //thread_start("thread2",1,thread2,NULL);
+    process_execute(process1,"p1");
+    process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     
@@ -72,7 +90,14 @@ int main(){
     gdt_ptr.base = new_gdt;
     gdt_ptr.limit = old_gdt_ptr.limit;
     set_gdt(&gdt_ptr);
-    
+    int p_count = 0;
+    for(int i = 0; i < 1024;i++){
+        page* page_dir_entry = (page *)((uintaddr_t)(PAGE_DIR_VADDR) + i * 4);
+        p_count += page_dir_entry->P;
+        printf("i:%d p: %d p_count:%d\n",i, page_dir_entry->P, p_count);
+    }
+  
+    printf("cr3:0X%x\n",get_cr3_register()); 
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 

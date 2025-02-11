@@ -52,4 +52,21 @@ interrupt_state set_interrupt_state(interrupt_state state);
 @brief 时钟中断函数
 */
 void timer_interrupt(void);
+
+/*
+@brief 线程中断的返回方法,但需要注意此时的栈要求
+| eflags  |
+|补充0|cs|
+|  eip   |
+|error_code| (可能是伪造的0) <----esp
+
+若有特权级的变化可能也有
+|补充0|ss|
+|   esp  |
+| eflags  |
+|补充0|cs|
+|  eip   |
+|error_code| (可能是伪造的0) <----esp
+*/
+void intr_exit(void);
 #endif

@@ -158,6 +158,9 @@ setup_kernel_page_dir_and_table:
     mov [esi], eax
     add esi, 4
     loop .clear_kernel_page_dir_entry
+;然后将页目录填充满，指向对应的二级页表地址
+.init_page_dir:
+    
 
 ;开始映射物理低端4MB到虚拟低端4MB
     mov esi, KERNEL_PAGE_DIR_ADDR + 0x1000 ;第一个页表首地址

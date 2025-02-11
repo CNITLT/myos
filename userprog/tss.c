@@ -8,7 +8,7 @@ void init_tss(void){
     g_tss.io_base = sizeof(struct tss);//超过GDT里的界限值则表明没有IO位图,下面的界限值是sizeof(struct tss)-1
     
     struct gdt_entry* p_gdt = (struct gdt_entry*)get_gdt_addr();
-    struct gdt_entry* p_gdt_tss = p_gdt + 3;//设置第4个为TSS表项值
+    struct gdt_entry* p_gdt_tss = p_gdt + (GDT_SELECTOR_GLOBAL_TSS >> 3);//设置第3个为TSS表项值
     init_gdt_entry_with_default_config_and_param(p_gdt_tss, GDT_ENTRY_S_SYSTEM, GDT_ENTRY_TYPE_TSS, GDT_ENTRY_DPL_0);
     //先置0，其实没设置好
     p_gdt_tss->p = 0;

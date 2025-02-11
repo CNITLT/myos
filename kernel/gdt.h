@@ -262,4 +262,7 @@ void init_gdt_entry_part_with_default_config(struct gdt_entry* p_gdt_entry);
 @param dpl: uint16_t: dpl位配置
 */
 void init_gdt_entry_with_default_config_and_param(struct gdt_entry* p_gdt_entry, uint16_t s, uint16_t type, uint16_t dpl);
+
+
+
 #endif

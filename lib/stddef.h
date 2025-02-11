@@ -4,4 +4,5 @@
 #define NAKEDFUNC __attribute__((naked))
 #define true (1)
 #define false (0)
+#define DIV_ROUND_UP(X, STEP) ((X + STEP - 1) / (STEP))
 #endif

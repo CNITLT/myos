@@ -21,6 +21,7 @@ typedef enum task_status{
 
 
 
+
 /***********   中断栈intr_stack   ***********
  * 此结构用于中断发生时保护程序(线程或进程)的上下文环境:
  * 进程或线程被外部中断或软中断打断时,会按照此结构压入上下文
@@ -92,7 +93,7 @@ struct task_struct {
    struct list_node general_tag;//一般队列中的节点
    struct list_node all_list_tag;//总队列中的节点
    vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址
-   memory_pool vmemory_pool; // 用于标记虚拟地址空间池
+   memory_pool vmemory_pool; // 用于标记虚拟地址空间池, 只用于用户进程，内核用的是全局变量记录的
    uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
 
 
@@ -112,6 +113,10 @@ struct task_struct {
 */
 };
 
+
+extern struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
+extern struct list thread_ready_list; //就绪队列
+extern struct list thread_all_list;//总队列
 
 
 /*

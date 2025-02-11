@@ -7,6 +7,8 @@
 //内核页目录和页表的虚拟地址
 #define KERNEL_PAGE_DIR_VADDR 0xFFFFF000
 
+//正在使用的用户和内核的页目录地址都是这个
+#define PAGE_DIR_VADDR KERNEL_PAGE_DIR_VADDR
 //带VALUE的是指用单个成员判断时候的值，而不是用比特位来判断
 #define PAGE_P_VALUE_EXIST 1
 #define PAGE_P_VALUE_UNEXIST 0
@@ -23,6 +25,11 @@
 #define PAGE_US_ATTR_SYS 0x0
 #define PAGE_US_ATTR_USER 0x4
 
+#define PAGE_DIR_INDEX(ADDR) (((uintaddr_t)ADDR>>22)&0x3FF)
+#define PAGE_TABLE_INDEX(ADDR) (((uintaddr_t)ADDR>>12)&0x3FF)
+
+#define PAGE_MASK(ADDR) ((uintaddr_t)ADDR & 0xFFF)
+#define PAGE_INDEX(ADDR) (((uintaddr_t)ADDR>>12)&0xFFFFF)
 
 //页属性定义
 typedef struct page{
@@ -44,7 +51,7 @@ typedef page* page_paddr_t;
 /*
 @brief 在页目录和页面在逻辑上汇集在4MB内的条件下，根据虚拟地址获取到对应的页表项虚拟地址
 @param vaddr:vaddr_t: 虚拟地址
-@param page_dir:vaddr_t:页目录的虚拟地址
+@param page_dir:vaddr_t:正在被使用的页目录的虚拟地址
 @return page_vaddr_t 对应的页表项首地址
 */
 page_vaddr_t get_page_table_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
@@ -52,7 +59,7 @@ page_vaddr_t get_page_table_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
 /*
 @brief 在页目录和页面在逻辑上汇集在4MB内的条件下,根据虚拟地址获取到对应的页目录表项的虚拟地址
 @param vaddr:vaddr_t: 虚拟地址
-@param page_dir:vaddr_t:页目录的虚拟地址
+@param page_dir:vaddr_t:正在被使用的页目录的虚拟地址
 @return page_vaddr_t 对应的页表项首地址
 */
 page_vaddr_t get_page_dir_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
@@ -61,7 +68,7 @@ page_vaddr_t get_page_dir_entry_vaddr(vaddr_t vaddr, vaddr_t page_dir);
 /*
 @brief 将虚拟地址转化为对应的物理地址
 @param vaddr:vaddr_t: 虚拟地址
-@param page_dir:vaddr_t: 页目录
+@param page_dir:vaddr_t: 正在被使用的页目录虚拟地址
 @return paddr_t 转化后的物理地址，如果对应页不存在则返回NULL
 */
 paddr_t vaddr2paddr(vaddr_t vaddr, vaddr_t page_dir);
@@ -72,7 +79,7 @@ paddr_t vaddr2paddr(vaddr_t vaddr, vaddr_t page_dir);
 @brief 设置页目录项
 @param vaddr:vaddr_t: 页目录对应的某个虚拟地址
 @param paddr:paddr_t: 物理地址，推荐4K对齐
-@param page_dir: vaddr_t: 页目录的虚拟地址
+@param page_dir: vaddr_t: 正在被使用的页目录的虚拟地址
 @param page_attr: uint32_t: 页属性
 */
 void set_page_dir_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t page_attr);
@@ -84,9 +91,22 @@ void set_page_dir_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t
 @brief 设置页目录项
 @param vaddr:vaddr_t: 页表项对应的某个虚拟地址
 @param paddr:paddr_t: 物理地址，推荐4K对齐
-@param page_dir: vaddr_t: 页目录的虚拟地址
+@param page_dir: vaddr_t: 正在被使用的页目录的虚拟地址
 @param page_attr: uint32_t: 页属性
 @return error_code_t 成功返回NOERROR
 */
 error_code_t set_page_table_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t page_attr);
+
+
+/*
+@brief 替换CR3寄存器的页目录指向
+@param page_dir_paddr: paddr_t :新页目录的物理地址
+@return paddr_t 旧目录地址
+*/
+paddr_t set_cr3_register(paddr_t page_dir_paddr);
+
+/*
+@brief 获取当前正在使用的页目录物理地址,即CR3寄存器的值
+*/
+paddr_t get_cr3_register();
 #endif
