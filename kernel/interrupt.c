@@ -5,6 +5,11 @@
 #include "thread.h"
 #include "debug.h"
 #include "init.h"
+
+//控制默认中断函数是否打印DEBUG信息
+#define DEFAULT_INTR_FUNC_PF
+
+
 //中断门描述符定义
 typedef struct interrupt_gate_desc{
     uint16_t func_offset_low; //中断处理程序在目标代码段的偏移中的低16位
@@ -281,8 +286,24 @@ static void default_interrupt_func(void){
     movl %%eax, %0; \
     "::"m"(INTERRUPT_NUM):"memory");
     INTERRUPT_NUM &= 0x000000FF;
-    
-    printf("this is default interruput func interupt_num:%d\n",INTERRUPT_NUM);
+    uint32_t ERROR_CODE;
+    asm volatile(" \
+        movl 60(%%ebp),%%eax; \
+        movl %%eax, %0; \
+        "::"m"(ERROR_CODE):"memory");
+    uintaddr_t CS;
+    uintaddr_t EIP;
+    asm volatile(" \
+        movl 68(%%ebp),%%eax; \
+        movl %%eax, %0; \
+        "::"m"(CS):"memory");
+    asm volatile(" \
+        movl 64(%%ebp),%%eax; \
+        movl %%eax, %0; \
+        "::"m"(EIP):"memory");
+    #ifdef DEFAULT_INTR_FUNC_PF
+    printf("default interruput func interupt_num:%d error_code:0X%x CS:EIP:0x%x:0X%x\n",INTERRUPT_NUM, ERROR_CODE,CS,EIP);
+    #endif
 }
 
 //把所有中断注册为默认的
