@@ -132,13 +132,13 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
         return NULL;
     }
     vaddr_t vaddr = malloc_page_from_pool(page_count, p_vmemory_pool, (((uintaddr_t)start_vaddr-p_vmemory_pool->start)/PAGE_SIZE));
-    
     if(vaddr == NULL){
         pfree_page(paddr, page_count);
         put_str("vmalloc_page faild!\n");
         return NULL;
     }
-    //计算可能有多少个不同的页表
+    
+    //计算可能有多少个不同的页表, 采用先统一分配的方式，方便执行到一半的时候内存不足的情况下的内存回收
     size_t table_count = get_page_dir_entry_vaddr(((uintaddr_t)start_vaddr + (page_count-1) * PAGE_SIZE), page_dir) - 
                         get_page_dir_entry_vaddr(start_vaddr, page_dir) + 1;
     
@@ -149,6 +149,7 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
         put_str("pmalloc table faild!\n");
         return NULL;
     }
+    
     size_t table_paddr_index = 0;//可以使用的页表需要的物理页索引
     //页都分配完毕，开始映射
     for(size_t i = 0; i < page_count; i++){
@@ -159,7 +160,8 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
         page* p_page_dir_entry = get_page_dir_entry_vaddr(t_vaddr, page_dir);
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
             //说明没有对应的页表，映射一个页表
-            set_page_dir_entry(t_vaddr, (paddr_t)((uintaddr_t)table_paddr + PAGE_SIZE * table_paddr_index ), page_dir, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_SYS);//页表的对应的物理页只能系统访问，这里可以固定这些属性
+            set_page_dir_entry(t_vaddr, (paddr_t)((uintaddr_t)table_paddr + PAGE_SIZE * table_paddr_index), page_dir,
+             PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);//系统的页表是固定的，这里能运行到的话只能是用户的，这里可以固定这些属性
             table_paddr_index++;
         }
         set_page_table_entry(t_vaddr, t_paddr, page_dir, page_attr);

@@ -39,14 +39,18 @@ void thread2(void* args){
 
 void process1(){
     while(1){
-        sync_printf("process1\n"); 
+        //不能用sync_printf里面的锁是内核的东西，用户态访问不到
+        //thread_yield也不行，目前很多函数都是直接用了内核的东西，用户态一用就出问题
+        //printf是因为显存的地址给用户态了,能直接改显存
+        //目前的代码内核态有些地方是用户态能访问的，权限给的有些乱
+        printf("process1\n");
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
 }
 
 void process2(){
     while(1){
-        sync_printf("process2\n"); 
+        printf("process2\n"); 
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
 }
@@ -56,7 +60,7 @@ void init_thread(void *args){
     //thread_start("thread1",1,thread1,NULL);
     //thread_start("thread2",1,thread2,NULL);
     process_execute(process1,"p1");
-    //process_execute(process2,"p2");
+    process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     
@@ -98,6 +102,7 @@ int main(){
         printf("i:%d p: %d p_count:%d\n",i, page_dir_entry->P, p_count);
     }
     */
+   
     printf("start_process:%x\n",start_process);
 
     printf("cr3:0X%x\n",get_cr3_register()); 
