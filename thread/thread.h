@@ -50,6 +50,7 @@ struct interrupt_stack {
     uint32_t eflags;
     void* esp;
     uint32_t ss;
+
 };
 
 /***********  线程栈thread_stack  ***********
@@ -83,7 +84,7 @@ struct thread_stack {
 
 /* 进程或线程的pcb,程序控制块 */
 struct task_struct {
-   vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方
+   vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方, 也即存ESP的位置
    enum task_status status;
    uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
    char name[16];

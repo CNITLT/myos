@@ -111,7 +111,7 @@ void process_activate(struct task_struct* pcb){
     //debug("after page_dir_activate\n"); 
     //debug("after cr3:%x\n",get_cr3_register());
     /* 内核线程特权级本身就是0,处理器进入中断时并不会从tss中获取0特权级栈地址,故不需要更新esp0 */
-    if (pcb != &main_thread_pcb && pcb->page_dir) {
+    if (pcb->page_dir) {
        /* 更新该进程的esp0,用于此进程被中断时保留上下文 */
        //debug("update_tss_esp0\n");
        update_tss_esp0(pcb);
@@ -122,7 +122,7 @@ void process_activate(struct task_struct* pcb){
 void page_dir_activate(struct task_struct* pcb){
     //默认激活内核，如果是正常的用户线程就用用户页表替换掉内核的页表
     paddr_t page_dir_paddr = KERNEL_PAGE_DIR_PADDR;
-    if(pcb != &main_thread_pcb && pcb->page_dir){
+    if(pcb->page_dir){
         page_dir_paddr = vaddr2paddr(pcb->page_dir, PAGE_DIR_VADDR);
     }
     //debug("page_dir_paddr:%x\n",page_dir_paddr);

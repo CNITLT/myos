@@ -22,8 +22,12 @@ void thread1(void* args){
     //open_interrupt();
     sync_printf("thread1:%x interupt_state:%d\n", thread1, get_interrupt_state()); 
     while(1){
-        sync_printf("thread1:%x read:%c\n", thread1, read_ascii_from_keyboard_ioqueue()); 
-        thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
+        //sync_printf("thread1:%x read:%c\n", thread1, read_ascii_from_keyboard_ioqueue()); 
+        //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
+        printf("thread1\n");
+        for(int i = 0;i<1024;i++){
+            for(int j = 0; j < 1024;j++){}
+        }
     }
 }
 
@@ -31,8 +35,12 @@ void thread2(void* args){
     //open_interrupt();
     sync_printf("thread2:%x interupt_state:%d\n", thread2, get_interrupt_state()); 
     while(1){ 
-        sync_printf("thread2:%x read:%c\n", thread2, read_ascii_from_keyboard_ioqueue()); 
-        thread_yield();
+        printf("thread2\n");
+        for(int i = 0;i<1024;i++){
+            for(int j = 0; j < 1024;j++){}
+        }
+        //sync_printf("thread2:%x read:%c\n", thread2, read_ascii_from_keyboard_ioqueue()); 
+        //thread_yield();
     }
 }
 
@@ -44,6 +52,10 @@ void process1(){
         //printf是因为显存的地址给用户态了,能直接改显存
         //目前的代码内核态有些地方是用户态能访问的，权限给的有些乱
         printf("process1\n");
+        for(int i = 0;i<1024;i++){
+            for(int j = 0; j < 1024;j++){}
+        }
+        
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
 }
@@ -51,14 +63,17 @@ void process1(){
 void process2(){
     while(1){
         printf("process2\n"); 
+        for(int i = 0;i<1024;i++){
+            for(int j = 0; j < 1024;j++){}
+        }
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
 }
 
 void init_thread(void *args){
     close_interrupt();
-    //thread_start("thread1",1,thread1,NULL);
-    //thread_start("thread2",1,thread2,NULL);
+    thread_start("thread1",1,thread1,NULL);
+    thread_start("thread2",1,thread2,NULL);
     process_execute(process1,"p1");
     process_execute(process2,"p2");
     open_interrupt();
@@ -69,6 +84,7 @@ void init_thread(void *args){
         //thread_yield();
     }
 }
+
 
 
 int main(){
@@ -85,7 +101,6 @@ int main(){
     sync_printf("gdt limit:0x%x\n", get_gdt_limit());
     sync_printf("sizeof(tss):%d\n", sizeof(struct tss));
     pf_gdt_entry((struct gdt_entry *)get_gdt_addr()+1);
-    
     
     struct gdt_ptr old_gdt_ptr = get_gdt_ptr();
     vaddr_t new_gdt = malloc_kernel_page(1);

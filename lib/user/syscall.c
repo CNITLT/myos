@@ -1,0 +1,17 @@
+#include "syscall.h"
+syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
+
+syscall_ret_type syscall(syscall_param_type syscallNum, ...){
+    syscall_ret_type ret = 0;
+    syscall_param_type* args = &syscallNum;
+    //这三个参数值可能是随机的，看当时的栈是什么，有用的话实际的函数会取的到，没用的话也不会用到，用三个是为了不区分调用形式
+    //这里最多就浪费点指令和空间
+    syscall_param_type arg1 = args[1];
+    syscall_param_type arg2 = args[2];
+    syscall_param_type arg3 = args[3];
+    asm volatile(" \
+        int $0x80 \
+        ":"=a"(ret) \
+        :"a"(syscallNum), "b"(arg1), "c"(arg2),"d"(arg3));
+    return ret;
+}
