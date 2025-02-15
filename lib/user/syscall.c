@@ -1,5 +1,5 @@
 #include "syscall.h"
-syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
+
 
 syscall_ret_type syscall(syscall_param_type syscallNum, ...){
     syscall_ret_type ret = 0;

@@ -1,0 +1,17 @@
+#include "syscall_init.h"
+#include "print.h"
+
+syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
+/*
+默认系统调用中断，还是只打印一句话
+*/
+static void syscall_default_func(){
+    printf("this is default syscall func\n");
+}
+
+void syscall_init(){
+    for(int i = 0; i < SYSCALL_SIZE;i++){
+        syscall_table[i] = syscall_default_func;
+    }
+    // TODO:: 有需要这里加额外的系统调用中断
+}

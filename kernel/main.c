@@ -13,6 +13,7 @@
 #include "gdt.h"
 #include "tss.h"
 #include "process.h"
+#include "syscall.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -121,6 +122,7 @@ int main(){
     printf("start_process:%x\n",start_process);
 
     printf("cr3:0X%x\n",get_cr3_register()); 
+    syscall(0);
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 

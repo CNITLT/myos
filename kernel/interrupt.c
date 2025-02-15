@@ -5,7 +5,7 @@
 #include "thread.h"
 #include "debug.h"
 #include "init.h"
-#include "syscall.h"
+#include "syscall_init.h"
 //控制默认中断函数是否打印DEBUG信息
 #define DEFAULT_INTR_FUNC_PF
 

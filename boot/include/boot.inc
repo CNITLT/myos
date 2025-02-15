@@ -1,5 +1,6 @@
 LOADER_BASE_ADDR equ 0x900 
 LOADER_STACK_TOP equ LOADER_BASE_ADDR
+;启动的时候单个扇区指代512字节
 LOADER_START_SECTOR equ 0x2 ;loader扇区起始地址
 LOADER_SIZE_SECTOR equ 4 ;加载器占的扇区大小
 
