@@ -15,3 +15,7 @@ syscall_ret_type syscall(syscall_param_type syscallNum, ...){
         :"a"(syscallNum), "b"(arg1), "c"(arg2),"d"(arg3));
     return ret;
 }
+
+pid_t getpid(void){
+    return syscall(SYS_GETPID);
+}

@@ -2,6 +2,7 @@
 #define __SYSCALL_INIT_H
 #include "stdint.h"
 #include "stddef.h"
+#include "thread.h"
 //系统调用个数
 #define SYSCALL_SIZE 64
 //用uint32_t其实只是为了与寄存器大小一致 实际函数还是要看具体的系统调用类别
@@ -17,5 +18,12 @@ extern syscall_addr syscall_table[SYSCALL_SIZE];
 */
 void syscall_init();
 
+
+//sys开头的函数都是系统调用对应的实际执行功能的函数
+/*
+@brief 返回当前线程的PID
+@return pid_t 线程PID
+*/
+pid_t sys_getpid(void);
 
 #endif

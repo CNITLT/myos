@@ -63,7 +63,8 @@ void process1(){
 
 void process2(){
     while(1){
-        printf("process2\n"); 
+        printf("process2 pid:%d\n",getpid());
+        
         for(int i = 0;i<1024;i++){
             for(int j = 0; j < 1024;j++){}
         }
@@ -122,7 +123,6 @@ int main(){
     printf("start_process:%x\n",start_process);
 
     printf("cr3:0X%x\n",get_cr3_register()); 
-    syscall(0);
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 

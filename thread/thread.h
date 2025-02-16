@@ -9,7 +9,7 @@
 typedef void thread_func(void*);
 //该类型的指针
 typedef thread_func* p_thread_func;
-
+typedef uint32_t pid_t;
 typedef enum task_status{
     TASK_RUNNING, //运行状态
     TASK_READY, //就绪状态
@@ -85,6 +85,7 @@ struct thread_stack {
 /* 进程或线程的pcb,程序控制块 */
 struct task_struct {
    vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方, 也即存ESP的位置
+   pid_t pid;
    enum task_status status;
    uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
    char name[16];
@@ -181,4 +182,11 @@ void thread_unblock(struct task_struct* pcb);
 @brief 当前线程主动放弃CPU
 */
 void thread_yield();
+
+
+/*
+@brief 分配一个未使用的PID 本质是按序分配
+@return pid_t 未使用的pid
+*/
+pid_t allcoate_pid(void);
 #endif

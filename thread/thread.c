@@ -10,7 +10,7 @@
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
 struct list thread_ready_list; //就绪队列
 struct list thread_all_list;//总队列
-
+struct mutex pid_lock;
 
 /* 由kernel_thread去执行function(func_arg) */
 static void kernel_thread(thread_func* function, void* func_arg) {
@@ -82,6 +82,7 @@ void init_pcb(struct task_struct* pcb, char* name, int priority){
     pcb->ticks = pcb->priority;
     pcb->elapsed_ticks = 0;
     pcb->page_dir = NULL;
+    pcb->pid = allcoate_pid();
     if(pcb == main_thread_pcb){
         pcb->status = TASK_RUNNING;
     }
@@ -114,6 +115,7 @@ struct task_struct* get_current_pcb(void){
 void init_thread_boot(thread_func main_function, void* func_arg){
     list_init(&thread_ready_list);
     list_init(&thread_all_list);
+    mutex_init(&pid_lock);
     main_thread_pcb = malloc_kernel_page(1);
     init_pcb(main_thread_pcb, "main", 10);
     thread_create(main_thread_pcb, main_function, func_arg);
@@ -188,4 +190,12 @@ void thread_yield(){
     interrupt_state old_state = close_interrupt();
     schedule();
     set_interrupt_state(old_state); 
+}
+
+pid_t allcoate_pid(void){
+    static pid_t next_pid = 0;
+    lock(&pid_lock);
+    pid_t ret = next_pid++;
+    unlock(&pid_lock);
+    return ret;
 }
