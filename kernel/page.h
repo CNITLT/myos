@@ -88,7 +88,7 @@ void set_page_dir_entry(vaddr_t vaddr, paddr_t paddr, vaddr_t page_dir, uint32_t
 
 #define ERROR_PAGE_TABLE_UNEXIST -1
 /*
-@brief 设置页目录项
+@brief 设置页表项
 @param vaddr:vaddr_t: 页表项对应的某个虚拟地址
 @param paddr:paddr_t: 物理地址，推荐4K对齐
 @param page_dir: vaddr_t: 正在被使用的页目录的虚拟地址

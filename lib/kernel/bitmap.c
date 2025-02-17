@@ -46,7 +46,7 @@ size_t bitmap_find_range_from_index(bitmap* p_bitmap, size_t range_bit, size_t s
 
 
 void bitmap_range_set(bitmap* p_bitmap, size_t index_bit, size_t range_bit, bit_state value) {
-    //debug("bitmap_range_set index_bit:%d range_bit:%d p_bitmap->len_bit:%d\n", index_bit, range_bit, p_bitmap->len_bit);
+    debug("bitmap_range_set index_bit:%d range_bit:%d p_bitmap->len_bit:%d\n", index_bit, range_bit, p_bitmap->len_bit);
     assert(index_bit + range_bit - 1 < p_bitmap->len_bit);
 
     for (size_t i = index_bit; i < p_bitmap->len_bit&& i - index_bit< range_bit; i++) {

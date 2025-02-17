@@ -52,7 +52,9 @@ void process1(){
         //thread_yield也不行，目前很多函数都是直接用了内核的东西，用户态一用就出问题
         //printf是因为显存的地址给用户态了,能直接改显存
         //目前的代码内核态有些地方是用户态能访问的，权限给的有些乱
-        printf("process1\n");
+        void* p = malloc(3002);
+        printf("user process2:%d ret:0x%x\n",getpid(),p);
+        free(p);
         for(int i = 0;i<1024;i++){
             for(int j = 0; j < 1024;j++){}
         }
@@ -62,9 +64,10 @@ void process1(){
 }
 
 void process2(){
-    while(1){
-        printf("process2 pid:%d\n",getpid());
-        
+    while(1){ 
+        void* p = malloc(32);
+        printf("user process2:%d ret:0x%x\n",getpid(),p);
+        free(p);
         for(int i = 0;i<1024;i++){
             for(int j = 0; j < 1024;j++){}
         }
@@ -76,15 +79,18 @@ void init_thread(void *args){
     close_interrupt();
     // thread_start("thread1",1,thread1,NULL);
     // thread_start("thread2",1,thread2,NULL);
-    // process_execute(process1,"p1");
-    // process_execute(process2,"p2");
+    process_execute(process1,"p1");
+    //process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
-    for(int i = 0 ; ; i++){
-        void* p = sys_malloc(32) ;
-        printf("sys_malloc ret:0x%x\n",p);
-    }
+  
     while(1){     
+        void* p = sys_malloc(32) ;
+        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        sys_free(p);
+        for(int i = 0;i<1024;i++){
+            for(int j = 0; j < 1024;j++){}
+        }
         //sync_printf("init_thread:%x read:%c\n", init_thread, read_ascii_from_keyboard_ioqueue());  
         //thread_yield();
     }

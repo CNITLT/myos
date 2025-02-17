@@ -211,4 +211,12 @@ struct arena* malloc_and_init_block_arena(struct mem_block_desc* p_block_desc);
 @return void *:可用空间的首地址
 */
 void *sys_malloc(size_t size);
+
+
+/*
+@brief 释放sys_malloc分配的空间
+@param p: void * :将要释放的sys_malloc分配的地址
+*/
+void sys_free(void* p);
+
 #endif

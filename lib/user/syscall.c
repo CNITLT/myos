@@ -19,3 +19,11 @@ syscall_ret_type syscall(syscall_param_type syscallNum, ...){
 pid_t getpid(void){
     return syscall(SYS_GETPID);
 }
+
+void* malloc(size_t size){
+    return syscall(SYS_MALLOC, size);
+}
+
+void free(void* p){
+    return syscall(SYS_FREE, p);
+}

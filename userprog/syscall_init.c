@@ -1,6 +1,7 @@
 #include "syscall_init.h"
 #include "print.h"
 #include "syscall.h"
+#include "memory.h"
 syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
 /*
 默认系统调用中断，还是只打印一句话
@@ -15,6 +16,8 @@ void syscall_init(){
     }
     // TODO:: 有需要这里加额外的系统调用中断
     syscall_table[SYS_GETPID] = sys_getpid;
+    syscall_table[SYS_MALLOC] = sys_malloc;
+    syscall_table[SYS_FREE] = sys_free;
 }
 
 

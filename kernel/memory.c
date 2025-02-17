@@ -154,7 +154,8 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
         put_str("pmalloc table faild!\n");
         return NULL;
     }
-    
+    //加锁进行保护
+    lock(&p_vmemory_pool->lock);
     size_t table_paddr_index = 0;//可以使用的页表需要的物理页索引
     //页都分配完毕，开始映射
     for(size_t i = 0; i < page_count; i++){
@@ -171,6 +172,7 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
         }
         set_page_table_entry(t_vaddr, t_paddr, page_dir, page_attr);
     }
+    unlock(&p_vmemory_pool->lock);
     // 回收没用到的页表内存
     if(table_paddr_index < table_count){
         pfree_page((paddr_t)((uintaddr_t)table_paddr + PAGE_SIZE * table_paddr_index), 
@@ -181,12 +183,16 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
 
 
 void free_page_core(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir){
+    lock(&p_vmemory_pool->lock);
     for(size_t i = 0; i < page_count; i++){
         vaddr_t t_vaddr = (vaddr_t)((uintaddr_t)vaddr + i * PAGE_SIZE);
         page* p_page_table_entry = get_page_table_entry_vaddr(t_vaddr, page_dir);
         pfree_page((paddr_t)(p_page_table_entry->PADDR * PAGE_SIZE),1);
         set_page_table_entry(t_vaddr, NULL, page_dir, PAGE_P_ATTR_UNEXIST);
+        //刷新TLB缓存
+        asm volatile("invlpg %0"::"m"(t_vaddr):"memory");
     }
+    unlock(&p_vmemory_pool->lock);
     free_page_from_pool(vaddr, page_count, p_vmemory_pool); 
 }
 
@@ -312,15 +318,19 @@ void *sys_malloc(size_t size){
     if(size > BLOCK_MAX_SIZE){
         size_t page_count = DIV_ROUND_UP(size + sizeof(struct arena), PAGE_SIZE);
         ret = malloc_and_init_page_arena(page_count);
+        ret = arena2block(ret, 0);
     }
     else{
         struct task_struct *pcb = get_current_pcb();
+        memory_pool * p_vmemory_pool = NULL;
         struct mem_block_desc* desc_arr = NULL;
         if(is_kernel_thread(pcb)){
             desc_arr = g_kernel_block_desc;
+            p_vmemory_pool = &kernel_vmemory_pool;
         }
         else{
             desc_arr = pcb->u_block_desc;
+            p_vmemory_pool = &pcb->vmemory_pool;
         }
         //查找是哪个大小的block
         int desc_index = 0;
@@ -331,13 +341,49 @@ void *sys_malloc(size_t size){
         }
         struct mem_block_desc* p_desc = &desc_arr[desc_index];
         //此类block_size大小的block没了就开始分配一个arena
+        lock(&p_vmemory_pool->lock);
         if(list_empty(&p_desc->free_list)){
             malloc_and_init_block_arena(p_desc);
         }
         struct mem_block* p_block = elem2entry(struct mem_block, free_node, list_pop_front(&p_desc->free_list));
         struct arena* p_arena = block2arena(p_block);
         p_arena->count.free_count--;
+        unlock(&p_vmemory_pool->lock);
         ret = p_block;
     }
     return ret;
+}
+
+
+void sys_free(void* p){
+    if(!p) {
+        return;
+    }
+    struct arena* p_arena = block2arena(p);
+    if(p_arena->large_flag){
+        free_page(p_arena, p_arena->count.page_count);
+    }
+    else{
+        struct task_struct *pcb = get_current_pcb();
+        memory_pool * p_vmemory_pool = NULL;
+        if(is_kernel_thread(pcb)){
+            p_vmemory_pool = &kernel_vmemory_pool;
+        }
+        else{
+            p_vmemory_pool = &pcb->vmemory_pool;
+        }
+        lock(&p_vmemory_pool->lock);
+        struct mem_block_desc* p_block_desc = p_arena->p_block_desc;
+        list_push_front(&p_block_desc->free_list, p);
+        p_arena->count.free_count++;
+        if(p_arena->count.free_count == p_block_desc->blocks_per_arena){
+            //空闲的arena释放掉
+            for(int i = 0; i < p_block_desc->blocks_per_arena; i++){
+                struct mem_block* p_block = arena2block(p_arena, i);
+                list_remove(&p_block->free_node);
+            }
+            free_page(p_arena, 1);
+        }
+        unlock(&p_vmemory_pool->lock);
+    }
 }
