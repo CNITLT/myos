@@ -15,6 +15,10 @@
 
 static memory_pool ph_memory_pool;
 static memory_pool kernel_vmemory_pool;
+static struct mem_block_desc g_kernel_block_desc[BLOCK_DESC_SIZE];
+
+
+
 void* __alloca(size_t size){
     assert(size != 0);
     //调用函数的时候看了反汇编是先sub $12,%%esp, 再push,用16字节对齐了栈，等价于传了16字节的参数，但也看了下其他的函数调用，又没对齐栈
@@ -92,9 +96,10 @@ void pmemory_pool_init(){
     ph_memory_pool.used = 0x1700000;
 }
 
-void memory_pool_init(){
+void memory_init(){
     pmemory_pool_init();
     kernel_vmemory_pool_init();
+    mem_block_desc_array_init(&g_kernel_block_desc);
 }
 
 void kernel_vmemory_pool_init(){
@@ -198,6 +203,43 @@ void free_kernel_page(vaddr_t vaddr, size_t page_count){
 }
 
 
+vaddr_t malloc_user_page(size_t page_count){
+    struct task_struct *pcb = get_current_pcb();
+    if(is_kernel_thread(pcb)){
+        return NULL;
+    }
+    return malloc_page_core(USER_VADDR_START,page_count,&pcb->vmemory_pool,
+        (vaddr_t)PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);
+}
+
+void free_user_page(vaddr_t vaddr, size_t page_count){
+    struct task_struct *pcb = get_current_pcb();
+    if(is_kernel_thread(pcb)){
+        return;
+    }
+    free_page_core(vaddr, page_count,&pcb->vmemory_pool, (vaddr_t)PAGE_DIR_VADDR);
+}
+
+vaddr_t malloc_page(size_t page_count){
+    struct task_struct *pcb = get_current_pcb();
+    if(is_kernel_thread(pcb)){
+        return malloc_kernel_page(page_count);
+    }
+    else{
+        return malloc_user_page(page_count);
+    }
+}
+
+void free_page(vaddr_t vaddr, size_t page_count){
+    struct task_struct *pcb = get_current_pcb();
+    if(is_kernel_thread(pcb)){
+        return free_kernel_page(vaddr,page_count);
+    }
+    else{
+        return free_user_page(vaddr,page_count);
+    }
+}
+
 void user_vmemory_pool_init(memory_pool* p_user_vmemory_pool){
     size_t page_count = (USER_PROCESS_MEMORY_MAX_LENGTH + PAGE_SIZE - 1)/ PAGE_SIZE;
     size_t bitmap_size_byte = (page_count + 8 - 1) / 8;
@@ -210,4 +252,92 @@ void user_vmemory_pool_init(memory_pool* p_user_vmemory_pool){
     p_user_vmemory_pool->bmap.bits = malloc_kernel_page(bitmap_size_page);
     bitmap_init(&p_user_vmemory_pool->bmap);
     mutex_init(&p_user_vmemory_pool->lock);
+}
+
+
+void mem_block_desc_array_init(struct mem_block_desc* desc_array){
+    size_t block_size = BLOCK_MIN_SIZE;
+    for(int i = 0; i < BLOCK_DESC_SIZE;i++){
+        desc_array[i].block_size = block_size;
+        desc_array[i].blocks_per_arena = (PAGE_SIZE - sizeof(struct arena))/block_size;
+        list_init(&desc_array[i].free_list);
+        block_size *= 2;
+    }
+}
+
+struct mem_block* arena2block(struct arena* p_arena, size_t index){
+    if(p_arena->large_flag){
+        return (struct mem_block*)((uintaddr_t)p_arena + sizeof(struct arena));
+    }
+    return (struct mem_block*)((uintaddr_t)p_arena + sizeof(struct arena) + p_arena->p_block_desc->block_size*index);
+}
+
+
+struct arena* block2arena(struct mem_block* p_block){
+    return (struct arena*)(PAGE_INDEX(p_block) * PAGE_SIZE);
+}
+
+struct arena* malloc_and_init_page_arena(size_t page_count){
+    struct arena* ret;
+    ret = malloc_page(page_count);
+    if(NULL == ret){
+        return NULL;
+    }
+    ret->large_flag = true;
+    ret->p_block_desc = NULL;
+    ret->count.page_count = page_count;
+    return ret;
+}
+
+
+struct arena* malloc_and_init_block_arena(struct mem_block_desc* p_block_desc){
+    struct arena* ret;
+    ret = malloc_page(1);
+    if(NULL == ret){
+        return NULL;
+    }
+    ret->large_flag = false;
+    ret->p_block_desc = p_block_desc;
+    ret->count.free_count = p_block_desc->blocks_per_arena;
+    for(int i = 0; i < p_block_desc->blocks_per_arena; i++){
+        struct mem_block* p_block = arena2block(ret, i);
+        list_push_back(&p_block_desc->free_list, &p_block->free_node);
+    }
+    return ret;
+}
+
+
+void *sys_malloc(size_t size){
+    void *ret = NULL;
+    if(size > BLOCK_MAX_SIZE){
+        size_t page_count = DIV_ROUND_UP(size + sizeof(struct arena), PAGE_SIZE);
+        ret = malloc_and_init_page_arena(page_count);
+    }
+    else{
+        struct task_struct *pcb = get_current_pcb();
+        struct mem_block_desc* desc_arr = NULL;
+        if(is_kernel_thread(pcb)){
+            desc_arr = g_kernel_block_desc;
+        }
+        else{
+            desc_arr = pcb->u_block_desc;
+        }
+        //查找是哪个大小的block
+        int desc_index = 0;
+        for(desc_index = 0; desc_index < BLOCK_DESC_SIZE; desc_index++) {
+            if(size <= desc_arr[desc_index].block_size){
+                break;
+            }
+        }
+        struct mem_block_desc* p_desc = &desc_arr[desc_index];
+        //此类block_size大小的block没了就开始分配一个arena
+        if(list_empty(&p_desc->free_list)){
+            malloc_and_init_block_arena(p_desc);
+        }
+        struct mem_block* p_block = elem2entry(struct mem_block, free_node, list_pop_front(&p_desc->free_list));
+        struct arena* p_arena = block2arena(p_block);
+        p_arena->count.free_count--;
+        ret = p_block;
+    }
+    return ret;
 }

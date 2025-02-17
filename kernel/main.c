@@ -74,13 +74,16 @@ void process2(){
 
 void init_thread(void *args){
     close_interrupt();
-    thread_start("thread1",1,thread1,NULL);
-    thread_start("thread2",1,thread2,NULL);
-    process_execute(process1,"p1");
-    process_execute(process2,"p2");
+    // thread_start("thread1",1,thread1,NULL);
+    // thread_start("thread2",1,thread2,NULL);
+    // process_execute(process1,"p1");
+    // process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
-    
+    for(int i = 0 ; ; i++){
+        void* p = sys_malloc(32) ;
+        printf("sys_malloc ret:0x%x\n",p);
+    }
     while(1){     
         //sync_printf("init_thread:%x read:%c\n", init_thread, read_ascii_from_keyboard_ioqueue());  
         //thread_yield();

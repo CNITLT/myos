@@ -52,52 +52,51 @@ void start_process(void* filename){
 }
 
 vaddr_t create_page_dir(void){
-  
-   vaddr_t page_dir_vaddr = malloc_kernel_page(1);
-   memset(page_dir_vaddr,0,PAGE_SIZE);
-   if (page_dir_vaddr == NULL) {
-      printf("create_page_dir: malloc_kernel_page(1) failed!\n");
-      return NULL;
-   }
+    vaddr_t page_dir_vaddr = malloc_kernel_page(1);
+    memset(page_dir_vaddr,0,PAGE_SIZE);
+    if (page_dir_vaddr == NULL) {
+        printf("create_page_dir: malloc_kernel_page(1) failed!\n");
+        return NULL;
+    }
 
-   // 复制高1GB的内核页目录项目
-   memcpy((vaddr_t)((uintaddr_t)page_dir_vaddr + 1024*3), (vaddr_t)((uintaddr_t)PAGE_DIR_VADDR + 1024*3),1024);
-   //第一项也复制一下，前4MB是直接映射，也是归属内核的
-   memcpy((vaddr_t)((uintaddr_t)page_dir_vaddr), (vaddr_t)((uintaddr_t)PAGE_DIR_VADDR),4);
-   //页目录的物理地址更新，这个每个进程都是独立的，所以不会影响到内核，且内核的二级页目录都是固定的，全部进程共享,修改也会被所有进程看到
-   paddr_t page_dir_paddr = vaddr2paddr(page_dir_vaddr, PAGE_DIR_VADDR);
-   /* 页目录地址是存入在页目录的最后一项,更新页目录地址为新页目录的物理地址 */
-   page* p_dir_entry = ((page*)page_dir_vaddr + 1023);
-   p_dir_entry->PADDR = PAGE_INDEX(page_dir_paddr);
-   p_dir_entry->US = PAGE_US_VALUE_SYS;
-   p_dir_entry->RW = PAGE_RW_VALUE_RW;
-   p_dir_entry->P = PAGE_P_VALUE_EXIST;
+    // 复制高1GB的内核页目录项目
+    memcpy((vaddr_t)((uintaddr_t)page_dir_vaddr + 1024*3), (vaddr_t)((uintaddr_t)PAGE_DIR_VADDR + 1024*3),1024);
+    //第一项也复制一下，前4MB是直接映射，也是归属内核的
+    memcpy((vaddr_t)((uintaddr_t)page_dir_vaddr), (vaddr_t)((uintaddr_t)PAGE_DIR_VADDR),4);
+    //页目录的物理地址更新，这个每个进程都是独立的，所以不会影响到内核，且内核的二级页目录都是固定的，全部进程共享,修改也会被所有进程看到
+    paddr_t page_dir_paddr = vaddr2paddr(page_dir_vaddr, PAGE_DIR_VADDR);
+    /* 页目录地址是存入在页目录的最后一项,更新页目录地址为新页目录的物理地址 */
+    page* p_dir_entry = ((page*)page_dir_vaddr + 1023);
+    p_dir_entry->PADDR = PAGE_INDEX(page_dir_paddr);
+    p_dir_entry->US = PAGE_US_VALUE_SYS;
+    p_dir_entry->RW = PAGE_RW_VALUE_RW;
+    p_dir_entry->P = PAGE_P_VALUE_EXIST;
 
-   return page_dir_vaddr;
+    return page_dir_vaddr;
 }
 
 struct task_struct* process_execute(void* filename, char* name){
-   // 先申请一个PCB
-   struct task_struct* pcb = malloc_kernel_page(1);
-   //初始化PCB信息
-   init_pcb(pcb, name, USER_PROCESS_DEFAULT_PRIOR); 
-   user_vmemory_pool_init(&pcb->vmemory_pool);
-   thread_create(pcb, start_process, filename);
+    // 先申请一个PCB
+    struct task_struct* pcb = malloc_kernel_page(1);
+    //初始化PCB信息
+    init_pcb(pcb, name, USER_PROCESS_DEFAULT_PRIOR); 
+    user_vmemory_pool_init(&pcb->vmemory_pool);
+    thread_create(pcb, start_process, filename);
+    mem_block_desc_array_init(&pcb->u_block_desc);
+    //页表创建
+    pcb->page_dir = create_page_dir();
 
-   //页表创建
-   pcb->page_dir = create_page_dir();
-   
-   enum interrupt_state old_state = close_interrupt();
+    enum interrupt_state old_state = close_interrupt();
 
-   assert(!find_node(&thread_ready_list, &pcb->general_tag));
-   list_push_back(&thread_ready_list, &pcb->general_tag);
+    assert(!find_node(&thread_ready_list, &pcb->general_tag));
+    list_push_back(&thread_ready_list, &pcb->general_tag);
 
-   assert(!find_node(&thread_all_list, &pcb->all_list_tag));
-   list_push_back(&thread_all_list, &pcb->all_list_tag);
+    assert(!find_node(&thread_all_list, &pcb->all_list_tag));
+    list_push_back(&thread_all_list, &pcb->all_list_tag);
 
-   set_interrupt_state(old_state);
-   //printf("process_execute\n");
-   return pcb;
+    set_interrupt_state(old_state);
+    //printf("process_execute\n");
+    return pcb;
 }
 
 
@@ -111,7 +110,7 @@ void process_activate(struct task_struct* pcb){
     //debug("after page_dir_activate\n"); 
     //debug("after cr3:%x\n",get_cr3_register());
     /* 内核线程特权级本身就是0,处理器进入中断时并不会从tss中获取0特权级栈地址,故不需要更新esp0 */
-    if (pcb->page_dir) {
+    if (is_user_thread(pcb)) {
        /* 更新该进程的esp0,用于此进程被中断时保留上下文 */
        //debug("update_tss_esp0\n");
        update_tss_esp0(pcb);
@@ -122,7 +121,7 @@ void process_activate(struct task_struct* pcb){
 void page_dir_activate(struct task_struct* pcb){
     //默认激活内核，如果是正常的用户线程就用用户页表替换掉内核的页表
     paddr_t page_dir_paddr = KERNEL_PAGE_DIR_PADDR;
-    if(pcb->page_dir){
+    if (is_user_thread(pcb)) {
         page_dir_paddr = vaddr2paddr(pcb->page_dir, PAGE_DIR_VADDR);
     }
     //debug("page_dir_paddr:%x\n",page_dir_paddr);

@@ -4,9 +4,34 @@
 #include "bitmap.h"
 #include "e820.h"
 #include "mutex.h"
+#include "list.h"
 #define ALIGN_SIZE 4
 #define ALIGN(x,size) ((x+size - 1) & ~(size-1))
 #define ALIGN_DOWN(x,size) (x & ~(size-1))
+//定义7个管理小Block的描述符 从16，32直到1024
+#define BLOCK_DESC_SIZE 7
+#define BLOCK_MIN_SIZE 16
+#define BLOCK_MAX_SIZE (BLOCK_MIN_SIZE << (BLOCK_DESC_SIZE - 1))
+struct mem_block {
+    struct list_node free_node;
+};
+
+struct mem_block_desc{
+    //这个结构是被arena共享的
+    size_t block_size; //块大小
+    size_t blocks_per_arena; //这里的arena基本上就代表一个页的概念，等价于是一个页去掉一些存元信息的空间，内部的blocks有多少块
+    struct list free_list;
+};
+
+struct arena{
+    // 如果是小于等于1024的内存大小这个才有用, 超过1024的被认为是大空间，按所需页直接分配，不采用小block的分配方法
+    struct mem_block_desc* p_block_desc;
+    union  {
+        size_t free_count;//large_flag为False，则这个有用 表明空闲块的数目 则这个arena只是管理一页大小的空间
+        size_t page_count;//large_flag为True, 则这个有用 表明这个arena管理的是多页分配，这里表明分配了多少页
+    } count;
+    bool large_flag;//采用懒加载的方式，所以不能按p_desc是不是null来判断，可能是还有请求到达，没进行初始化
+};
 
 
 typedef struct memory_pool{
@@ -59,9 +84,9 @@ void kernel_vmemory_pool_init();
 void user_vmemory_pool_init(memory_pool* p_user_vmemory_pool);
 
 /*
-@brief 物理内存池和内核虚拟内存池的初始化汇总。
+@brief 有关内存的初始化汇总。
 */
-void memory_pool_init();
+void memory_init();
 /*
 @brief 从物理内存池分配内存页
 @param page_count:size_t:分配的页数
@@ -98,7 +123,6 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
 void free_page_core(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_pool, vaddr_t page_dir);
 
 
-
 /*
 @brief 专门为内核分配页的malloc_page函数
 @param page_count:size_t: 需要分配页的数目
@@ -113,4 +137,78 @@ vaddr_t malloc_kernel_page(size_t page_count);
 @param page_count:size_t: 从vaddr_t开始的页计数，要释放的页数目
 */
 void free_kernel_page(vaddr_t vaddr, size_t page_count);
+
+
+/*
+@brief 为用户线程分配页的malloc_page函数, 要求当前PCB得是用户的
+@param page_count:size_t: 需要分配页的数目
+@return vaddr_t 分配后的页虚拟首地址，分配失败返回NULL
+*/
+vaddr_t malloc_user_page(size_t page_count);
+
+/*
+@brief 专门为释放用户的free_page函数
+@param vaddr_t:vaddr_t: 起点页内的任意虚拟内存地址
+@param page_count:size_t: 从vaddr_t开始的页计数，要释放的页数目
+*/
+void free_user_page(vaddr_t vaddr, size_t page_count);
+
+
+/*
+@brief 为当前线程分配页的malloc_page函数 自动区分内核线程和用户线程 该函数时运行必须在PCB的栈内 
+@param page_count:size_t: 需要分配页的数目
+@return vaddr_t 分配后的页虚拟首地址，分配失败返回NULL
+*/
+vaddr_t malloc_page(size_t page_count);
+
+/*
+@brief 释放页的函数，自动区分内核线程和用户线程
+@param vaddr_t:vaddr_t: 起点页内的任意虚拟内存地址
+@param page_count:size_t: 从vaddr_t开始的页计数，要释放的页数目
+*/
+void free_page(vaddr_t vaddr, size_t page_count);
+
+
+
+/*
+@brief 初始化block_desc数组
+@param desc_array: struct mem_block_desc*: 数组首地址
+*/
+void mem_block_desc_array_init(struct mem_block_desc* desc_array);
+
+/*
+@brief 获取arena内索引位对应的block, 若不是按block管理，则默认返回可用内存的首地址
+@param p_arena: struct arena*: arena首地址
+@param index: size_t : block 索引从0开始
+@return struct mem_block*: 可用内存的首地址，超出index范围返回NULL, 若不是按block管理，则默认返回可用内存的首地址
+*/
+struct mem_block* arena2block(struct arena* p_arena, size_t index);
+
+/*
+@brief 返回block所在的arena地址，只能对管理block的arena分配出去的地址使用
+@param p_block: struct mem_block* :管理block的arena分配出去的地址
+@return struct arena*: 管理此block的arena地址
+*/
+struct arena* block2arena(struct mem_block* p_block);
+
+/*
+@brief 从内存池里面分配一定内存并初始化为以页为单位管理的arena 调用时要求是内核态
+@param page_count: size_t : 所需要分配的页数
+@return struct arena*: 所分配的arena首地址, 失败返回NULL
+*/
+struct arena* malloc_and_init_page_arena(size_t page_count);
+
+/*
+@brief 从内存池里面分配一页内存并初始化为以block为单位管理的arena 调用时要求是内核态
+@param p_block_desc: struct mem_block_desc* : 对应的block_desc的地址
+@return struct arena*: 所分配的arena首地址, 失败返回NULL
+*/
+struct arena* malloc_and_init_block_arena(struct mem_block_desc* p_block_desc);
+
+/*
+@brief 分配指定大小的内存空间
+@param size: size_t :字节为单位的空间大小
+@return void *:可用空间的首地址
+*/
+void *sys_malloc(size_t size);
 #endif

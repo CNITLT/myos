@@ -199,3 +199,12 @@ pid_t allcoate_pid(void){
     unlock(&pid_lock);
     return ret;
 }
+
+bool is_kernel_thread(struct task_struct* pcb){
+    return NULL == pcb->page_dir;
+}
+
+
+bool is_user_thread(struct task_struct* pcb){
+    return NULL != pcb->page_dir;
+}

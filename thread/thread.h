@@ -86,6 +86,7 @@ struct thread_stack {
 struct task_struct {
    vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方, 也即存ESP的位置
    pid_t pid;
+   struct mem_block_desc u_block_desc[BLOCK_DESC_SIZE];
    enum task_status status;
    uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
    char name[16];
@@ -189,4 +190,20 @@ void thread_yield();
 @return pid_t 未使用的pid
 */
 pid_t allcoate_pid(void);
+
+
+/*
+@brief 判断一个PCB对应的是不是内核线程
+@param pcb: struct task_struct* : PCB地址
+@return bool true则是内核态，否则用户态
+*/
+bool is_kernel_thread(struct task_struct* pcb);
+
+
+/*
+@brief 判断一个PCB对应的是不是内核线程
+@param pcb: struct task_struct* : PCB地址
+@return bool true则是用户态，否则是内核态
+*/
+bool is_user_thread(struct task_struct* pcb);
 #endif
