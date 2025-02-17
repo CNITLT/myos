@@ -187,13 +187,13 @@ void free_page_core(vaddr_t vaddr, size_t page_count,  memory_pool* p_vmemory_po
     for(size_t i = 0; i < page_count; i++){
         vaddr_t t_vaddr = (vaddr_t)((uintaddr_t)vaddr + i * PAGE_SIZE);
         page* p_page_table_entry = get_page_table_entry_vaddr(t_vaddr, page_dir);
-        pfree_page((paddr_t)(p_page_table_entry->PADDR * PAGE_SIZE),1);
+        pfree_page((paddr_t)(p_page_table_entry->PADDR * PAGE_SIZE),1); 
         set_page_table_entry(t_vaddr, NULL, page_dir, PAGE_P_ATTR_UNEXIST);
         //刷新TLB缓存
         asm volatile("invlpg %0"::"m"(t_vaddr):"memory");
     }
-    unlock(&p_vmemory_pool->lock);
     free_page_from_pool(vaddr, page_count, p_vmemory_pool); 
+    unlock(&p_vmemory_pool->lock);
 }
 
 

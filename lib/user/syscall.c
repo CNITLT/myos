@@ -25,5 +25,5 @@ void* malloc(size_t size){
 }
 
 void free(void* p){
-    return syscall(SYS_FREE, p);
+    syscall(SYS_FREE, p);
 }

@@ -86,7 +86,7 @@ void init_thread(void *args){
   
     while(1){     
         void* p = sys_malloc(32) ;
-        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        //printf("kernel thread:%d ret:0x%x\n",getpid(),p);
         sys_free(p);
         for(int i = 0;i<1024;i++){
             for(int j = 0; j < 1024;j++){}
@@ -95,7 +95,6 @@ void init_thread(void *args){
         //thread_yield();
     }
 }
-
 
 
 int main(){

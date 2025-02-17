@@ -10,7 +10,7 @@ typedef uint32_t syscall_ret_type;
 typedef uint32_t syscall_param_type; 
 typedef void* syscall_addr;
 // 最多只用三个参数的系统调用,这个是统一形式上的调用方式
-typedef syscall_ret_type (*syscall_call_proxy)(syscall_param_type syscallNum,...);
+typedef syscall_ret_type (*syscall_call_proxy)(syscall_param_type arg1,...);
 extern syscall_addr syscall_table[SYSCALL_SIZE];
 
 /*

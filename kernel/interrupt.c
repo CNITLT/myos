@@ -468,7 +468,7 @@ static void int80H_interrupt_func(void){
     syscall_param_type arg3 = p_intr_stack->edx;
     syscall_call_proxy syscall_func = syscall_table[syscallNum];
     if(syscall_func){
-        ret = syscall_func(syscallNum, arg1,arg2,arg3);//最多支持3个额外参数 
+        ret = syscall_func(arg1,arg2,arg3);//最多支持3个额外参数 
         p_intr_stack->eax = ret; //返回值设置
     }
 }
