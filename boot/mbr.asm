@@ -32,11 +32,7 @@ SECTION MBR vstart=0x7c00  ;到mbr的时候，cs:ip为0000:0x7c00
     jmp LOADER_BASE_ADDR
 
 
-
-
-
-
-; 功能:读主硬盘
+; 功能:读主硬盘核心逻辑.一次最多只能读255扇区, 硬盘本身支持256，ecx给0就行，但是下面代码没考虑ecx为0的情况,所以只能少一个了
 ; 参数:eax:读取数据的起始逻辑扇区号, LBA28模式，只取低28位
 ;bx:数据存放的地址，实际是ds*16+bx
 ;cx:读取扇区的数目
@@ -64,15 +60,11 @@ read_disk:
     mov dx, DISK_DEVICE_PORT_ADDR
     out dx,al
     pop cx
-    ;这里其实逻辑有问题，漏向0X1F2写入要读取的扇区数，这里猜测没写，默认是0，读取了256个扇区，所以能正常运行
-    ;能跑，懒得改了
-    ;测试下是不是真的是0
-    ;push ax
-    ;mov dx, DISK_SECTOR_COUNT_PORT_ADDR 
-    ;in ax, dx 
-    ;jmp $
-    ;pop ax
-    ;测完了不是0，是255，没多大差别
+
+    ;写入读取扇区数，这里最多一次性读取256
+    mov dx, DISK_SECTOR_COUNT_PORT_ADDR
+    mov ax, cx
+    out dx, al
 
     ;要读取的扇区起始地址写完，开始准备发送读命令
     mov dx, DISK_COMMAND_PORT_ADDR

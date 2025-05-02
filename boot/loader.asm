@@ -123,7 +123,7 @@ pe_mode_start:
     mov eax, KERNEL_START_SECTOR
     mov ebx, KERNEL_BIN_BASE_ADDR
     mov ecx, KERNEL_SIZE_SECTOR
-    call read_disk_32
+    call read_disk_32 ;前面不加东西的话,此时cs:eip为0x0008:0x0bce
     
     ;再初始化内核
     call kernel_init
@@ -234,11 +234,40 @@ setup_kernel_page_dir_and_table:
     popad
     ret
 
-;32位下读取磁盘,还是LBA28方法, 最大能支持到128GB 单个扇区512字节
+;32位下读取磁盘核心逻辑,还是LBA28方法, 最大能支持到128GB 单个扇区512字节
 ; 参数:eax:读取数据的起始逻辑扇区号, LBA28模式，只取低28位
 ;ebx:数据存放的地址
 ;ecx:读取扇区的数目
 read_disk_32:
+    pusha
+;对ecx超出255的进行适配
+    cmp ecx, 255
+    jbe .once_read
+.mul_read:
+    mov edx, ecx
+    mov ecx, 255
+    call read_disk_32_core
+;调整eax到新的数据起点
+    add eax, 255
+;调整ebx到读取后的数据末尾,即下一次数据开始的地址
+    add ebx, 255*512
+;判断要不要继续
+    sub edx, 255
+    mov ecx, edx
+    cmp ecx, 255
+    jbe .once_read
+    jmp .mul_read
+    
+.once_read:
+    call read_disk_32_core
+    popa
+    ret
+
+;32位下读取磁盘核心逻辑,还是LBA28方法, 最大能支持到128GB 单个扇区512字节, 一次最多只能读255扇区, 硬盘本身支持256，ecx给0就行，但是下面代码没考虑ecx为0的情况,所以只能少一个了
+; 参数:eax:读取数据的起始逻辑扇区号, LBA28模式，只取低28位
+;ebx:数据存放的地址
+;ecx:读取扇区的数目
+read_disk_32_core:
     pusha
     ; 写入lba28的起始地址
     mov dx, DISK_LBA28_LOW_PORT_ADDR
@@ -261,8 +290,12 @@ read_disk_32:
     mov dx, DISK_DEVICE_PORT_ADDR
     out dx,al
     pop ecx
-    ;这里其实逻辑有问题，漏向0X1F2写入要读取的扇区数，这里猜测没写，默认是0，读取了256个扇区，所以能正常运行
-    ;能跑，懒得改了
+
+    ;写入读取扇区数，这里最多一次性读取256
+    mov dx, DISK_SECTOR_COUNT_PORT_ADDR
+    mov ax, cx
+    out dx, al
+
     ;要读取的扇区起始地址写完，开始准备发送读命令
     mov dx, DISK_COMMAND_PORT_ADDR
     mov al, DISK_COMMAND_READ
