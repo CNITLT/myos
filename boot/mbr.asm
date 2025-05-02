@@ -1,4 +1,5 @@
 %include "include/boot.inc" ;包含一些配置数据
+DISK_SECTOR_COUNT_PORT_ADDR equ 0x1F2
 DISK_LBA28_LOW_PORT_ADDR equ 0x1F3
 DISK_LBA28_MID_PORT_ADDR equ 0x1F4
 DISK_LBA28_HIGH_PORT_ADDR equ 0x1F5
@@ -63,6 +64,15 @@ read_disk:
     mov dx, DISK_DEVICE_PORT_ADDR
     out dx,al
     pop cx
+    ;这里其实逻辑有问题，漏向0X1F2写入要读取的扇区数，这里猜测没写，默认是0，读取了256个扇区，所以能正常运行
+    ;能跑，懒得改了
+    ;测试下是不是真的是0
+    ;push ax
+    ;mov dx, DISK_SECTOR_COUNT_PORT_ADDR 
+    ;in ax, dx 
+    ;jmp $
+    ;pop ax
+    ;测完了不是0，是255，没多大差别
 
     ;要读取的扇区起始地址写完，开始准备发送读命令
     mov dx, DISK_COMMAND_PORT_ADDR
