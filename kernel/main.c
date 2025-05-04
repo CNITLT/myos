@@ -14,6 +14,7 @@
 #include "tss.h"
 #include "process.h"
 #include "syscall.h"
+#include "timer.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -53,11 +54,9 @@ void process1(){
         //printf是因为显存的地址给用户态了,能直接改显存
         //目前的代码内核态有些地方是用户态能访问的，权限给的有些乱
         void* p = malloc(3002);
-        printf("user process2:%d ret:0x%x\n",getpid(),p);
+        printf("user process1:%d ret:0x%x\n",getpid(),p);
         free(p);
-        for(int i = 0;i<1024;i++){
-            for(int j = 0; j < 1024;j++){}
-        }
+        //sleep_ms(1000);
         
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
@@ -68,29 +67,40 @@ void process2(){
         void* p = malloc(32);
         printf("user process2:%d ret:0x%x\n",getpid(),p);
         free(p);
-        for(int i = 0;i<1024;i++){
-            for(int j = 0; j < 1024;j++){}
-        }
+        //sleep_ms(1000);
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
     }
 }
 
 void init_thread(void *args){
     close_interrupt();
-    // thread_start("thread1",1,thread1,NULL);
+    //thread_start("thread1",1,thread1,NULL);
     // thread_start("thread2",1,thread2,NULL);
-    process_execute(process1,"p1");
+    //thread_start("idle",1,idle_thread_func,NULL);
+    //process_execute(process1,"p1");
     //process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
-  
+    uint32_t count = 0;
     while(1){     
         void* p = sys_malloc(32) ;
-        //printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
         sys_free(p);
-        for(int i = 0;i<1024;i++){
-            for(int j = 0; j < 1024;j++){}
+        sleep_ms(1000);
+        //printf("sleep 1s\n");
+        //printf("thread_yield\n");
+        
+        //printf("count:%d\n",count++);
+        //printf("thread_yield:%x\n", thread_yield);
+        //thread_yield();
+        /*
+        for(int i = 0; i < 1024;i++){
+            for(int j = 0; j < 1024;j++){
+
+            }
         }
+        */
+        
         //sync_printf("init_thread:%x read:%c\n", init_thread, read_ascii_from_keyboard_ioqueue());  
         //thread_yield();
     }
@@ -102,8 +112,9 @@ int main(){
     clear_screen();
     set_cursor_loc(0);
     print_e820_table();
- 
+
     init_all();
+
     close_interrupt();
     register_interrupt_func(0x20, timer_interrupt); 
     vaddr_t gdt = get_gdt_addr();
@@ -119,6 +130,9 @@ int main(){
     gdt_ptr.base = new_gdt;
     gdt_ptr.limit = old_gdt_ptr.limit;
     set_gdt(&gdt_ptr);
+    //0x475这个物理地址存了磁盘个数
+    uint8_t disk_count = *((uint8_t*)0x475);
+    printf("image disk count:%d\n", disk_count);
     /*
     int p_count = 0;
     for(int i = 0; i < 1024;i++){

@@ -17,6 +17,7 @@ keyboard: keymap=./bochsConfigs/x11-pc-us.map
 #硬盘设置
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 ata0-master: type=disk, mode=flat, path="c.img"
+ata0-slave: type=disk, mode=flat, path="d.img"
 
 cpu: count=1, ips=50000000, model=bx_generic, reset_on_triple_fault=1, cpuid_limit_winnt=0, ignore_bad_msrs=1, mwait_is_nop=0, msrs="msrs.def"
 cpuid: level=6, stepping=3, model=3, family=6

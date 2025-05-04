@@ -9,16 +9,20 @@
 #include "tss.h"
 #include "process.h"
 #include "syscall_init.h"
+#include "ide.h"
 void init_all(){
     interrupt_state old_state = close_interrupt();
+    
     interrupt_init();
     timer_init();
     memory_init();
     console_init();
     keyboard_init();
-    set_interrupt_state(old_state);
     init_tss();
     user_gdt_init();
     syscall_init();
+    ide_init();
+
+    set_interrupt_state(old_state);
 }
 

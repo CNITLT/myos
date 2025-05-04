@@ -206,4 +206,9 @@ bool is_kernel_thread(struct task_struct* pcb);
 @return bool true则是用户态，否则是内核态
 */
 bool is_user_thread(struct task_struct* pcb);
+
+/*
+@brief idle线程函数
+*/
+void idle_thread_func(void *args);
 #endif

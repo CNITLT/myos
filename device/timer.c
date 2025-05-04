@@ -1,6 +1,6 @@
 #include "timer.h"
 #include "io.h"
-
+#include "thread.h"
 
 #define TIMER_CONTROL_PORT 0x43
 #define TIMER_CONTROL_SELECT_TIMER0 (0x0 << 6) //选择计数器0
@@ -27,10 +27,29 @@
 #define TIMER2_PORT 0x42
 
 #define CLK_FREQUENCY 1193180  //clk引脚接的晶振频率
+#define TIMER_INTR_FREQUENCY 100 //设置的时钟中断频率，单位HZ,即10ms一次中断
+
+volatile size_t g_tick = 0;
 
 void timer_init(){
     outb(TIMER_CONTROL_PORT, TIMER_CONTROL_SELECT_TIMER0 | TIMER_CONTROL_RW_LOW_HIGH | TIMER_CONTROL_MODE2 | TIMER_CONTROL_BINARY);
-    outb(TIMER0_PORT, (uint16_t)(CLK_FREQUENCY / 100) &0xFF);
-    outb(TIMER0_PORT, ((uint16_t)(CLK_FREQUENCY / 100) &0xFF00)>>8);
+    outb(TIMER0_PORT, (uint16_t)(CLK_FREQUENCY / TIMER_INTR_FREQUENCY) &0xFF);
+    outb(TIMER0_PORT, ((uint16_t)(CLK_FREQUENCY / TIMER_INTR_FREQUENCY) &0xFF00)>>8);
 }
 
+size_t ms_per_tick(){
+    return 1000 / TIMER_INTR_FREQUENCY;
+}
+
+void sleep_ticks(size_t sleep_time_tick){
+    size_t start_tick = g_tick;
+    while((g_tick - start_tick) < sleep_time_tick){
+        //printf("start_tick:%d sleep_time_tick:%d g_tick:%d\n", start_tick, sleep_time_tick,g_tick);
+        thread_yield();
+    }
+}
+
+void sleep_ms(size_t sleep_time_ms){
+    size_t sleep_time_tick = DIV_ROUND_UP(sleep_time_ms, ms_per_tick());
+    sleep_ticks(sleep_time_tick);
+}

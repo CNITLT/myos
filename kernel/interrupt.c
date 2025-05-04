@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "init.h"
 #include "syscall_init.h"
+#include "timer.h"
 //控制默认中断函数是否打印DEBUG信息
 #define DEFAULT_INTR_FUNC_PF
 
@@ -414,23 +415,35 @@ static void idt_desc_init(void){
 */
 static void pic_init(void){
     
-   /* 初始化主片 */
-   outb (PIC_8259A_MASTER_ICW1_PORT, 0x11);   // ICW1: 边沿触发,级联8259, 需要ICW4.
-   outb (PIC_8259A_MASTER_ICW2_PORT, 0x20);   // ICW2: 起始中断向量号为0x20,也就是IR[0-7] 为 0x20 ~ 0x27.
-   outb (PIC_8259A_MASTER_ICW3_PORT, 0x04);   // ICW3: IR2接从片. 
-   outb (PIC_8259A_MASTER_ICW4_PORT, 0x01);   // ICW4: 8086模式, 正常EOI
+    /* 初始化主片 */
+    outb (PIC_8259A_MASTER_ICW1_PORT, 0x11);   // ICW1: 边沿触发,级联8259, 需要ICW4.
+    outb (PIC_8259A_MASTER_ICW2_PORT, 0x20);   // ICW2: 起始中断向量号为0x20,也就是IR[0-7] 为 0x20 ~ 0x27.
+    outb (PIC_8259A_MASTER_ICW3_PORT, 0x04);   // ICW3: IR2接从片. 
+    outb (PIC_8259A_MASTER_ICW4_PORT, 0x01);   // ICW4: 8086模式, 正常EOI
 
-   /* 初始化从片 */
-   outb (PIC_8259A_SLAVE_ICW1_PORT, 0x11);    // ICW1: 边沿触发,级联8259, 需要ICW4.
-   outb (PIC_8259A_SLAVE_ICW2_PORT, 0x28);    // ICW2: 起始中断向量号为0x28,也就是IR[8-15] 为 0x28 ~ 0x2F.
-   outb (PIC_8259A_SLAVE_ICW3_PORT, 0x02);    // ICW3: 设置从片连接到主片的IR2引脚
-   outb (PIC_8259A_SLAVE_ICW4_PORT, 0x01);    // ICW4: 8086模式, 正常EOI
+    /* 初始化从片 */
+    outb (PIC_8259A_SLAVE_ICW1_PORT, 0x11);    // ICW1: 边沿触发,级联8259, 需要ICW4.
+    outb (PIC_8259A_SLAVE_ICW2_PORT, 0x28);    // ICW2: 起始中断向量号为0x28,也就是IR[8-15] 为 0x28 ~ 0x2F.
+    outb (PIC_8259A_SLAVE_ICW3_PORT, 0x02);    // ICW3: 设置从片连接到主片的IR2引脚
+    outb (PIC_8259A_SLAVE_ICW4_PORT, 0x01);    // ICW4: 8086模式, 正常EOI
 
-   /* 打开主片上IR0,也就是目前只接受时钟产生的中断 */
-   //outb (PIC_8259A_MASTER_OCW1_PORT, 0xfe);
+
+    // 向OCW1写入，位为1就是屏蔽对应的中断, 位为0是放开对应的中断
+    /* 打开主片上IR0,也就是目前只接受时钟产生的中断 */
+    //outb (PIC_8259A_MASTER_OCW1_PORT, 0xfe);
+    
     /*时钟与键盘中断*/
-   outb (PIC_8259A_MASTER_OCW1_PORT, 0xfc);
-   outb (PIC_8259A_SLAVE_OCW1_PORT, 0xff);
+    //outb (PIC_8259A_MASTER_OCW1_PORT, 0xfc);
+    //outb (PIC_8259A_SLAVE_OCW1_PORT, 0xff);
+
+    /*时钟、键盘、硬盘中断*/
+    // 放开IPQ2的中断, 这个是级联8259A的中断连接位置
+    // f8包含了时钟、键盘、硬盘中断
+    outb (PIC_8259A_MASTER_OCW1_PORT, 0xf8);
+
+    // 从片的IRQ14控制硬盘的中断，放开
+    // 因为从主片开始编码，所以是14，本质上是从片的IRQ6， 从0编码，实质是第7位
+    outb(PIC_8259A_SLAVE_OCW1_PORT, 0xbf);
 }
 
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func){
@@ -491,14 +504,29 @@ void interrupt_init(){
 
 
 #define EFLAGS_IF 0x200
+#define GET_EFLAGS(EFLAG_VAR) asm volatile("pushfl; popl %0" : "=g" (EFLAG_VAR))
+
 interrupt_state get_interrupt_state(){
     interrupt_state state;
     uint32_t eflags;
+    GET_EFLAGS(eflags);
+    /*
+    //这种写法在开中断的时候会有问题，不知道是哪导致的, 神奇
     asm volatile("\
     pushf;\
     movl (%%esp), %%eax;\
     addl 4, %%esp;"\
     :"=a"(eflags)::);
+    */
+   /*
+   //测了下主要就是addl 4, %%esp这句话导致的，换成pop就没事, 不理解
+   asm volatile("\
+    pushf;\
+    movl (%%esp), %%eax;\
+    pop %%ebx;"\ 
+    :"=a"(eflags)::);
+    */
+    
     if(eflags&EFLAGS_IF){
         state = INTERRUPT_ENABLE;
     }
@@ -536,16 +564,16 @@ interrupt_state set_interrupt_state(interrupt_state state){
 }
 
 
-static uint64_t global_tick = 0;
 void timer_interrupt(void){
     struct task_struct* pcb = get_current_pcb();
-    global_tick++;
-    
-    //sync_printf("global tick:%d\n", global_tick);
+    g_tick++;
+    //debug("global tick:%d\n", g_tick);
     assert(pcb->stack_magic == STACK_OVERFLOW_MAGIC_NUM);
     pcb->ticks--;
     pcb->elapsed_ticks++;
+    //debug("pcb:%x name:%s pcb->ticks:%d pcb->elapsed_ticks:%d\n",pcb, pcb->name, pcb->ticks,pcb->elapsed_ticks);
     if(pcb->ticks <= 0){
+        //debug("timer_interrupt schedule \n");
         schedule();
     }
 }

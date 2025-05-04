@@ -6,8 +6,10 @@
 #include "debug.h"
 #include "io.h"
 #include "process.h"
+#include "list.h"
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
+struct task_struct* idle_thread_pcb; //idle空闲进程
 struct list thread_ready_list; //就绪队列
 struct list thread_all_list;//总队列
 struct mutex pid_lock;
@@ -138,6 +140,7 @@ void init_thread_boot(thread_func main_function, void* func_arg){
 void schedule() {
     //不在内部关中断，是因为用这个函数的时候在外部关，换线程后，还有机会换回来，然后在外部开
     assert(get_interrupt_state() == INTERRUPT_DISABLE);
+    //debug("schedul begin\n");
    struct task_struct* cur = get_current_pcb(); 
    if (cur->status == TASK_RUNNING) { // 若此线程只是cpu时间片到了,将其加入到就绪队列尾
         cur->ticks = cur->priority;     // 重新将当前线程的ticks再重置为其priority;
@@ -147,6 +150,11 @@ void schedule() {
       /* 若此线程需要某事件发生后才能继续上cpu运行,
       不需要将其加入队列,因为当前线程不在就绪队列中。*/
    }
+    /*
+   if(list_empty(&thread_ready_list)){
+        thread_unblock(idle_thread_pcb);
+   }
+   */
    struct list_node* thread_tag = list_pop_front(&thread_ready_list);   
    struct task_struct* next = elem2entry(struct task_struct, general_tag, thread_tag);
 
@@ -157,7 +165,7 @@ void schedule() {
    //debug("before activate cr3:%x\n",get_cr3_register());
    process_activate(next);
    //debug("after activate cr3:%x\n",get_cr3_register());
-   
+   //debug("schedul end next call switch_to\n");
    switch_to(cur, next);
 }
 
@@ -186,17 +194,41 @@ void thread_unblock(struct task_struct* pcb){
 
 void thread_yield(){
     struct task_struct* pcb = get_current_pcb();
-    assert(pcb->status == TASK_RUNNING);
     interrupt_state old_state = close_interrupt();
+    assert(pcb->status == TASK_RUNNING);
+    assert(!find_node(&thread_ready_list, &pcb->general_tag));
+    list_push_back(&thread_ready_list, &pcb->general_tag);
+    pcb->status = TASK_READY;
     schedule();
     set_interrupt_state(old_state); 
 }
 
 pid_t allcoate_pid(void){
     static pid_t next_pid = 0;
-    lock(&pid_lock);
-    pid_t ret = next_pid++;
-    unlock(&pid_lock);
+    pid_t ret = 0;
+    while(1){
+        lock(&pid_lock);
+        ret = next_pid++;
+        unlock(&pid_lock);
+        //找下PID是否已经存在，存在就重新分配
+        bool ret_exist_flag = false;
+        interrupt_state old_state = close_interrupt();
+        if(!list_empty(&thread_all_list)){
+            struct list_node* iter = thread_all_list.head.next;
+            while(iter != &(thread_all_list.tail)){
+                struct task_struct* pcb = elem2entry(struct task_struct, all_list_tag, iter); 
+                if(pcb->pid == ret){
+                    ret_exist_flag = true;
+                    break;
+                }
+                iter = iter->next;
+            }
+        }
+        set_interrupt_state(old_state);  
+        if(!ret_exist_flag){
+            break;
+        }
+    }
     return ret;
 }
 
@@ -207,4 +239,14 @@ bool is_kernel_thread(struct task_struct* pcb){
 
 bool is_user_thread(struct task_struct* pcb){
     return NULL != pcb->page_dir;
+}
+
+
+void idle_thread_func(void *args){
+    while(1){
+        thread_block(TASK_BLOCKED);
+        open_interrupt();
+        //hlt使CPU停转，等待中断响应 
+        asm volatile("hlt;":::"memory");
+    }
 }
