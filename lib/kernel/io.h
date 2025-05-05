@@ -52,4 +52,35 @@ static inline uint16_t inw(uint16_t port){
     return data;
 }
 
+
+/* 
+@brief 将addr处起始的word_cnt个字写入端口port 
+@param port: uint16_t :端口
+@param addr: const void* :数据起始地址
+@param word_cnt: uint32_t : 写入字个数
+*/
+static inline void outsw(uint16_t port, const void* addr, uint32_t word_cnt) {
+/*********************************************************
+     +表示此限制即做输入又做输出.
+    outsw是把ds:esi处的16位的内容写入port端口, 我们在设置段描述符时, 
+    已经将ds,es,ss段的选择子都设置为相同的值了,此时不用担心数据错乱。*/
+    asm volatile ("cld; rep outsw" : "+S" (addr), "+c" (word_cnt) : "d" (port));
+/******************************************************/
+}
+    
+
+/* 
+@brief 将从端口port读入的word_cnt个字写入addr
+@param port: uint16_t :端口
+@param addr: const void* :buff地址
+@param word_cnt: uint32_t : 读取字个数
+*/
+static inline void insw(uint16_t port, void* addr, uint32_t word_cnt) {
+/******************************************************
+     insw是将从端口port处读入的16位内容写入es:edi指向的内存,
+    我们在设置段描述符时, 已经将ds,es,ss段的选择子都设置为相同的值了,
+    此时不用担心数据错乱。*/
+    asm volatile ("cld; rep insw" : "+D" (addr), "+c" (word_cnt) : "d" (port) : "memory");
+/******************************************************/
+}
 #endif

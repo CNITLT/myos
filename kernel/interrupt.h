@@ -3,6 +3,11 @@
 #include "stdint.h"
 //实际的中断函数类型
 typedef void (*interrupt_func_handler)(void);
+//用于在中断函数里声明并定位到中断栈, 会声明一个struct interrupt_stack* p_intr_stack变量
+#define GET_P_INRE_STACK \
+struct interrupt_stack* p_intr_stack = NULL; \
+asm volatile("lea 8(%%ebp), %0":"=g"(p_intr_stack)::"memory");
+
 
 struct interrupt_stack;
 /*

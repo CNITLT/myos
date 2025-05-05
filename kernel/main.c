@@ -15,6 +15,7 @@
 #include "process.h"
 #include "syscall.h"
 #include "timer.h"
+#include "ide.h"
 #define __str(x) #x
 #define str(x) __str(x)
 #define TestInt(num) case num:asm(str(int $##num));break;
@@ -27,9 +28,7 @@ void thread1(void* args){
         //sync_printf("thread1:%x read:%c\n", thread1, read_ascii_from_keyboard_ioqueue()); 
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
         printf("thread1\n");
-        for(int i = 0;i<1024;i++){
-            for(int j = 0; j < 1024;j++){}
-        }
+        sleep_ms(2000);
     }
 }
 
@@ -38,9 +37,7 @@ void thread2(void* args){
     sync_printf("thread2:%x interupt_state:%d\n", thread2, get_interrupt_state()); 
     while(1){ 
         printf("thread2\n");
-        for(int i = 0;i<1024;i++){
-            for(int j = 0; j < 1024;j++){}
-        }
+        sleep_ms(2000);
         //sync_printf("thread2:%x read:%c\n", thread2, read_ascii_from_keyboard_ioqueue()); 
         //thread_yield();
     }
@@ -75,18 +72,19 @@ void process2(){
 void init_thread(void *args){
     close_interrupt();
     //thread_start("thread1",1,thread1,NULL);
-    // thread_start("thread2",1,thread2,NULL);
-    //thread_start("idle",1,idle_thread_func,NULL);
+    //thread_start("thread2",1,thread2,NULL);
+    thread_start("idle",1,idle_thread_func,NULL);
     //process_execute(process1,"p1");
     //process_execute(process2,"p2");
-    open_interrupt();
+    //open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     uint32_t count = 0;
     while(1){     
-        void* p = sys_malloc(32) ;
+        //get_interrupt_state();
+        void* p = sys_malloc(4096) ;
         printf("kernel thread:%d ret:0x%x\n",getpid(),p);
         sys_free(p);
-        sleep_ms(1000);
+        //sleep_ms(2000);
         //printf("sleep 1s\n");
         //printf("thread_yield\n");
         

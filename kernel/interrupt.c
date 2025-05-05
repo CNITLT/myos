@@ -510,8 +510,9 @@ interrupt_state get_interrupt_state(){
     interrupt_state state;
     uint32_t eflags;
     GET_EFLAGS(eflags);
-    /*
+    
     //这种写法在开中断的时候会有问题，不知道是哪导致的, 神奇
+    /*
     asm volatile("\
     pushf;\
     movl (%%esp), %%eax;\
