@@ -21,8 +21,10 @@ void init_all(){
     init_tss();
     user_gdt_init();
     syscall_init();
-    ide_init();
-
+    //ide_init(); 这个放这里不太行
     set_interrupt_state(old_state);
 }
 
+void init_other_in_main_thread(){
+    ide_init(); 
+}

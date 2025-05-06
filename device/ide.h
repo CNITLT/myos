@@ -9,7 +9,7 @@
 #define DISK_NAME_SIZE 8
 #define IDE_CHANNEL_NAME_SIZE 8
 #define PRIMARY_PART_SIZE 4
-#define LOGIC_PART_SIZE 8
+#define LOGIC_PART_SIZE 16
 #define DISKS_PER_IDE_CHANNEL 2
 #define SECTOR_SIZE_BYTE 512
 #define MAX_IDE_CHANNEL_COUNT 2
@@ -37,6 +37,7 @@ struct Disk{
     uint8_t dev_number; //主盘是0， 从盘是1
     struct Partition primary_parts[PRIMARY_PART_SIZE]; //主分区 最多4个
     struct Partition logic_parts[LOGIC_PART_SIZE]; //逻辑分区 有最多支持数，由宏设定
+    bool exist_flag; //磁盘是否存在
 };
 
 
@@ -58,6 +59,12 @@ struct Ide_channel{
 @brief 初始化硬盘数据结构
 */
 void ide_init();
+
+/*
+@brief 选择磁盘，用于在不需要lba的命令下使用
+@param p_disk: struct Disk* : 磁盘数据结构地址
+*/
+void select_disk(struct Disk* p_disk);
 
 /*
 @brief 写入起始扇区和操作扇区数并选择主盘或从盘
@@ -117,8 +124,20 @@ void ide_read(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t secto
 */
 void ide_write(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t sector_count);
 
+
+/*
+@brief 将identify 命令结果写入到buff内
+@param p_disk: struct Disk* : 磁盘数据结构地址
+@param buff: void* : 数据存储地址, 为null就只检测磁盘是否存在
+@return bool: 若检测不到磁盘，返回false
+*/
+bool ide_identify(struct Disk* p_disk, void* buff);
+
 /*
 @brief 硬盘中断函数
 */
 void disk_interrupt_func(void);
+
+
+
 #endif 

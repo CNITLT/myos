@@ -4,6 +4,7 @@
 #include "timer.h"
 #include "interrupt.h"
 #include "thread.h"
+#include "string.h"
 #define ide_reg_data(p_ide_channel) (p_ide_channel->port_base + 0)
 #define ide_reg_error(p_ide_channel) (p_ide_channel->port_base + 1)
 #define ide_reg_sector_count(p_ide_channel) (p_ide_channel->port_base + 2)
@@ -56,6 +57,9 @@ struct Ide_channel g_ide_channels[MAX_IDE_CHANNEL_COUNT]; //最大支持2个IDE�
 
 void ide_init(){
     uint8_t disk_count = *((uint8_t*)(0x475));//这个地址放着由BIOS检测到的磁盘个数;
+
+    printf("disk_count:%d\n", disk_count);
+
     g_channel_count = DIV_ROUND_UP(disk_count, 2);
     g_ide_channels[0].port_base = 0x1f0;
     g_ide_channels[0].interrupt_number = 0x20 + 14;
@@ -73,6 +77,26 @@ void ide_init(){
         register_interrupt_func(g_ide_channels[i].interrupt_number, disk_interrupt_func);
     }
 
+    //初始化磁盘相关数据结构
+    for(int i = 0; i < g_channel_count; i++){
+        g_ide_channels[i].devices[0].p_ide_channel = &g_ide_channels[i];
+        g_ide_channels[i].devices[0].dev_number = MASTER_DISK_DEV_NUMBER;
+        g_ide_channels[i].devices[1].p_ide_channel = &g_ide_channels[i]; 
+        g_ide_channels[i].devices[1].dev_number = SLAVE_DISK_DEV_NUMBER; 
+    } 
+
+    for(int i = 0; i < g_channel_count; i++){
+        ide_identify(&g_ide_channels[i].devices[0], NULL);
+        ide_identify(&g_ide_channels[i].devices[1], NULL);
+    }  
+}
+
+
+void select_disk(struct Disk* p_disk){
+    struct Ide_channel* p_ide_channel = p_disk->p_ide_channel; 
+    outb(ide_reg_dev(p_ide_channel), 
+    IDE_DEV_BIT_FIXED | IDE_DEV_LBA_MODE 
+    | ((p_disk->dev_number == SLAVE_DISK_DEV_NUMBER)?IDE_DEV_SLAVE_DISK:IDE_DEV_MASTER_DISK));
 }
 
 
@@ -208,13 +232,58 @@ void disk_interrupt_func(void){
     uint32_t ide_channel_number = interrupt_number - 0x20 - 14;
     struct Ide_channel* p_ide_channel = &g_ide_channels[ide_channel_number];
     assert(p_ide_channel->interrupt_number == interrupt_number);
+
+    //debug("disk_interrupt_func\n");
     if(p_ide_channel->expecting_intr_flag){
         //说明操作完成
         //读取status让磁盘知道中断已经被处理
         //发送reset命令或者写入新命令也可以让磁盘知道中断被处理
         p_ide_channel->expecting_intr_flag = false;
         //唤醒等待的线程
+        //debug("disk_interrupt_func before  semaphore_add\n");
         semaphore_add(&p_ide_channel->disk_done);
         inb(ide_reg_status(p_ide_channel));
     }
+    //debug("disk_interrupt_func quit\n");
+}
+
+bool ide_identify(struct Disk* p_disk, void* buff){
+    char disk_info[512];
+    memset(disk_info,0,sizeof(disk_info));
+    struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
+    
+    lock(&p_ide_channel->lock);
+    select_disk(p_disk);
+    send_disk_operator_cmd(p_disk, IDE_CMD_IDENTIFY);
+
+    //debug("ide_identify befort  semaphore_sub\n");
+    semaphore_sub(&p_disk->p_ide_channel->disk_done);
+    //debug("ide_identify after  semaphore_sub\n");
+
+    if(!busy_wait_disk(p_disk)){
+        PANIC("ide_identify faild!\n");
+    }
+
+    read_from_disk(p_disk, disk_info, 1);
+    if(buff){
+        memcpy(buff, disk_info, sizeof(disk_info));
+    }
+    unlock(&p_ide_channel->lock); 
+    //这里缺少检测硬盘是否存在的代码
+    char disk_sn[21] ;//序列号
+    char disk_type[41];//型号
+    memset(disk_sn,0,sizeof(disk_sn));
+    memset(disk_type,0,sizeof(disk_type));
+    uint32_t disk_size_sector =  0; //硬盘可用扇区数
+
+    //序列号信息偏移量是20， 长度是20
+    memcpy(disk_sn, &disk_info[20], 20);
+    //型号信息的偏移量是54，长度是40
+    memcpy(disk_type, &disk_info[54], 40);
+    // 可用扇区数的偏移量是120, 长度4
+    disk_size_sector = *(uint32_t*)(disk_info + 120);
+    printf("disk SN:%s\n", disk_sn);
+    printf("disk type:%s\n", disk_type);
+    printf("disk sector:%d\n", disk_size_sector);
+
 }

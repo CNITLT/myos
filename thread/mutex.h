@@ -9,9 +9,8 @@
 struct task_struct;
 //信号量
 struct semaphore{
-    uint32_t value;
+    int32_t value;
     struct list waiters;
-    uint32_t max_value;
 };
 
 // 锁，同一线程可重入

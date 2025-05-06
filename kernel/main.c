@@ -69,8 +69,11 @@ void process2(){
     }
 }
 
+//这个主线程函数用于测试
 void init_thread(void *args){
     close_interrupt();
+    //注册时钟中断函数
+    //register_interrupt_func(0x20, timer_interrupt); 
     //thread_start("thread1",1,thread1,NULL);
     //thread_start("thread2",1,thread2,NULL);
     thread_start("idle",1,idle_thread_func,NULL);
@@ -79,11 +82,12 @@ void init_thread(void *args){
     //open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     uint32_t count = 0;
+    ide_init();
     while(1){     
         //get_interrupt_state();
-        void* p = sys_malloc(4096) ;
-        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
-        sys_free(p);
+        //void* p = sys_malloc(4096) ;
+        //printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        //sys_free(p);
         //sleep_ms(2000);
         //printf("sleep 1s\n");
         //printf("thread_yield\n");
@@ -113,8 +117,7 @@ int main(){
 
     init_all();
 
-    close_interrupt();
-    register_interrupt_func(0x20, timer_interrupt); 
+    close_interrupt(); 
     vaddr_t gdt = get_gdt_addr();
     sync_printf("gdt base addr:0x%x\n", gdt);
     sync_printf("gdt limit:0x%x\n", get_gdt_limit());
@@ -146,6 +149,7 @@ int main(){
     //open_interrupt();
     init_thread_boot(init_thread, NULL);
 
+    //init_thread_boot(main_thread_func, NULL);
    
     while(1);
     return 0;

@@ -35,6 +35,8 @@ void timer_init(){
     outb(TIMER_CONTROL_PORT, TIMER_CONTROL_SELECT_TIMER0 | TIMER_CONTROL_RW_LOW_HIGH | TIMER_CONTROL_MODE2 | TIMER_CONTROL_BINARY);
     outb(TIMER0_PORT, (uint16_t)(CLK_FREQUENCY / TIMER_INTR_FREQUENCY) &0xFF);
     outb(TIMER0_PORT, ((uint16_t)(CLK_FREQUENCY / TIMER_INTR_FREQUENCY) &0xFF00)>>8);
+    //注册时钟中断函数
+    register_interrupt_func(0x20, timer_interrupt); 
 }
 
 size_t ms_per_tick(){

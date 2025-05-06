@@ -211,4 +211,16 @@ bool is_user_thread(struct task_struct* pcb);
 @brief idle线程函数
 */
 void idle_thread_func(void *args);
+
+
+/*
+@brief 主线程函数
+*/
+void main_thread_func(void *args);
+
+
+/*
+@brief 初始化idle线程的相关结构
+*/
+void init_idle_thread();
 #endif

@@ -98,7 +98,13 @@ void init_pcb(struct task_struct* pcb, char* name, int priority){
 
 
 struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg){
-    struct task_struct* pcb = malloc_kernel_page(1);
+    struct task_struct* pcb;
+    if(idle_thread_func == function){
+        pcb = idle_thread_pcb;
+    }
+    else{
+        pcb = malloc_kernel_page(1);
+    }
     init_pcb(pcb, name, prio);
     thread_create(pcb, function, func_arg);
     list_push_back(&thread_ready_list, &pcb->general_tag);
@@ -152,6 +158,7 @@ void schedule() {
    }
     
    if(list_empty(&thread_ready_list)){
+        debug("schedule unblock idle\n");
         thread_unblock(idle_thread_pcb);
    }
    
@@ -181,12 +188,20 @@ void thread_block(task_status status){
 }
 
 
+
 void thread_unblock(struct task_struct* pcb){
+    /*
+    static size_t call_count = 0;
+    call_count++;    
+    debug("thread_unblock call_count:%d\n",call_count);
+    */
+    //debug("thread_unblock pcb->status:%d name:%s addr:%x\n", pcb->status,pcb->name,pcb);
     assert(pcb->status == TASK_BLOCKED || pcb->status == TASK_HANGING || pcb->status == TASK_WAITING);
     interrupt_state old_state = close_interrupt();
     if(pcb->status != TASK_READY){
         assert(!find_node(&thread_ready_list, &pcb->general_tag));
         pcb->status = TASK_READY;
+        pcb->ticks = pcb->priority;
         list_push_back(&thread_ready_list, &pcb->general_tag);
     }
     set_interrupt_state(old_state);
@@ -249,4 +264,18 @@ void idle_thread_func(void *args){
         //hlt使CPU停转，等待中断响应 
         asm volatile("hlt;":::"memory");
     }
+}
+
+void main_thread_func(void *args){
+    close_interrupt();
+    init_idle_thread();
+    open_interrupt();
+    ide_init();
+    while(1){}
+}
+
+
+
+void init_idle_thread(){
+    thread_start("idle",1,idle_thread_func,NULL);
 }
