@@ -158,7 +158,7 @@ void schedule() {
    }
     
    if(list_empty(&thread_ready_list)){
-        debug("schedule unblock idle\n");
+        //debug("schedule unblock idle\n");
         thread_unblock(idle_thread_pcb);
    }
    
@@ -273,8 +273,6 @@ void main_thread_func(void *args){
     ide_init();
     while(1){}
 }
-
-
 
 void init_idle_thread(){
     thread_start("idle",1,idle_thread_func,NULL);

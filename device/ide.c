@@ -85,9 +85,26 @@ void ide_init(){
         g_ide_channels[i].devices[1].dev_number = SLAVE_DISK_DEV_NUMBER; 
     } 
 
+    int disk_init_done = 0;
     for(int i = 0; i < g_channel_count; i++){
-        ide_identify(&g_ide_channels[i].devices[0], NULL);
-        ide_identify(&g_ide_channels[i].devices[1], NULL);
+        for(int j = 0; j < DISKS_PER_IDE_CHANNEL; j++){
+            struct Disk* p_disk = &g_ide_channels[i].devices[j];
+            p_disk->exist_flag = ide_identify(p_disk, NULL);
+            if(p_disk->exist_flag){
+                memset(p_disk->name, 0, sizeof(p_disk->name));
+                p_disk->name[0] = 's';
+                p_disk->name[1] = 'd';
+                p_disk->name[2] = 'a' + disk_init_done;
+                if(!(i == 0 && j == 0)) {
+                    //第一个磁盘只用来存代码的，没有划分分区
+                    //余下的磁盘才进行划分
+                    
+
+                }
+                
+                disk_init_done++;
+            }
+        }
     }  
 }
 
@@ -126,6 +143,13 @@ void send_disk_operator_cmd(struct Disk* p_disk, uint8_t cmd){
     outb(ide_reg_cmd(p_ide_channel), cmd);
 }
 
+void send_disk_operator_cmd_without_intr(struct Disk* p_disk, uint8_t cmd){
+    struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
+    p_ide_channel->expecting_intr_flag = false;
+    outb(ide_reg_cmd(p_ide_channel), cmd);
+}
+
+
 void read_from_disk(struct Disk* p_disk, void* buff, uint32_t sector_count){
     uint32_t size_word = sector_count * 512 / 2;
     insw(ide_reg_data(p_disk->p_ide_channel), buff, size_word);
@@ -138,7 +162,7 @@ void write_to_disk(struct Disk* p_disk, void* buff, uint32_t sector_count){
 
 bool busy_wait_disk(struct Disk* p_disk){
     struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
-    uint32_t time_limit = 30 * 1000; //等30毫秒
+    uint32_t time_limit = 30 * 1000; //等30秒
     uint32_t sleep_time_ms = 10;
     uint32_t wait_time_ms = 0;
     while(wait_time_ms < time_limit){
@@ -156,6 +180,7 @@ bool busy_wait_disk(struct Disk* p_disk){
 
 void ide_read(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t sector_count){
     assert(lba_addr + sector_count < MAX_LBA);
+    assert(p_disk->exist_flag);
     struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
 
     lock(&p_ide_channel->lock);
@@ -192,6 +217,7 @@ void ide_read(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t secto
 
 void ide_write(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t sector_count){
     assert(lba_addr + sector_count < MAX_LBA);
+    assert(p_disk->exist_flag);
     struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
 
     lock(&p_ide_channel->lock);
@@ -233,7 +259,7 @@ void disk_interrupt_func(void){
     struct Ide_channel* p_ide_channel = &g_ide_channels[ide_channel_number];
     assert(p_ide_channel->interrupt_number == interrupt_number);
 
-    //debug("disk_interrupt_func\n");
+    debug("disk_interrupt_func\n");
     if(p_ide_channel->expecting_intr_flag){
         //说明操作完成
         //读取status让磁盘知道中断已经被处理
@@ -254,14 +280,26 @@ bool ide_identify(struct Disk* p_disk, void* buff){
     
     lock(&p_ide_channel->lock);
     select_disk(p_disk);
+    /*
+    //如果对应的磁盘不存在会因为无法触发中断导致卡死
     send_disk_operator_cmd(p_disk, IDE_CMD_IDENTIFY);
-
-    //debug("ide_identify befort  semaphore_sub\n");
+    uint8_t status = inb(ide_reg_status(p_ide_channel));
+    printf("ide_identify send cmd read status:%d\n", status);
+    debug("ide_identify befort  semaphore_sub\n");
     semaphore_sub(&p_disk->p_ide_channel->disk_done);
-    //debug("ide_identify after  semaphore_sub\n");
+    debug("ide_identify after  semaphore_sub\n");
+    */
+    send_disk_operator_cmd_without_intr(p_disk, IDE_CMD_IDENTIFY);
 
+    sleep_ms(10);
     if(!busy_wait_disk(p_disk)){
-        PANIC("ide_identify faild!\n");
+        uint8_t status = inb(ide_reg_status(p_ide_channel));
+        if(0 == status){
+            // 测了下没磁盘的时候这个值是0
+            return false;
+        }
+        //其他情况就认为是磁盘出错
+        PANIC("ide_identify faild! \n");
     }
 
     read_from_disk(p_disk, disk_info, 1);
@@ -285,5 +323,6 @@ bool ide_identify(struct Disk* p_disk, void* buff){
     printf("disk SN:%s\n", disk_sn);
     printf("disk type:%s\n", disk_type);
     printf("disk sector:%d\n", disk_size_sector);
-
+    printf("disk capacity:%d MB \n", disk_size_sector*512 / 1024 / 1024);
+    return true;
 }

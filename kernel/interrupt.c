@@ -442,8 +442,10 @@ static void pic_init(void){
     outb (PIC_8259A_MASTER_OCW1_PORT, 0xf8);
 
     // 从片的IRQ14控制硬盘的中断，放开
-    // 因为从主片开始编码，所以是14，本质上是从片的IRQ6， 从0编码，实质是第7位
-    outb(PIC_8259A_SLAVE_OCW1_PORT, 0xbf);
+    // 因为从主片开始编码，所以是14，本质上是从片的IRQ6， 从0编码，实质是第7位 
+    // 0xbf 只开放14 一个IDE通道
+    // 0x3f 开放14 15两个IDE通道中断
+    outb(PIC_8259A_SLAVE_OCW1_PORT, 0x3f);
 }
 
 interrupt_func_handler register_interrupt_func(uint16_t INTERRUPT_NUM, interrupt_func_handler func){

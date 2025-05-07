@@ -1,7 +1,7 @@
 #include "timer.h"
 #include "io.h"
 #include "thread.h"
-
+#include "debug.h"
 #define TIMER_CONTROL_PORT 0x43
 #define TIMER_CONTROL_SELECT_TIMER0 (0x0 << 6) //选择计数器0
 #define TIMER_CONTROL_SELECT_TIMER1 (0x1 << 6) //选择计数器1
@@ -46,7 +46,7 @@ size_t ms_per_tick(){
 void sleep_ticks(size_t sleep_time_tick){
     size_t start_tick = g_tick;
     while((g_tick - start_tick) < sleep_time_tick){
-        //printf("start_tick:%d sleep_time_tick:%d g_tick:%d\n", start_tick, sleep_time_tick,g_tick);
+        //debug("start_tick:%d sleep_time_tick:%d g_tick:%d intr_status:%d\n", start_tick, sleep_time_tick,g_tick,get_interrupt_state());
         thread_yield();
     }
 }

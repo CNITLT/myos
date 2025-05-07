@@ -76,19 +76,19 @@ void init_thread(void *args){
     //register_interrupt_func(0x20, timer_interrupt); 
     //thread_start("thread1",1,thread1,NULL);
     //thread_start("thread2",1,thread2,NULL);
-    thread_start("idle",1,idle_thread_func,NULL);
+    init_idle_thread();
     //process_execute(process1,"p1");
     //process_execute(process2,"p2");
-    //open_interrupt();
+    open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     uint32_t count = 0;
     ide_init();
     while(1){     
         //get_interrupt_state();
-        //void* p = sys_malloc(4096) ;
-        //printf("kernel thread:%d ret:0x%x\n",getpid(),p);
-        //sys_free(p);
-        //sleep_ms(2000);
+        void* p = sys_malloc(4096) ;
+        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        sys_free(p);
+        sleep_ms(2000);
         //printf("sleep 1s\n");
         //printf("thread_yield\n");
         

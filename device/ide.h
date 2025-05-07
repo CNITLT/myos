@@ -15,6 +15,13 @@
 #define MAX_IDE_CHANNEL_COUNT 2
 #define MASTER_DISK_DEV_NUMBER 0
 #define SLAVE_DISK_DEV_NUMBER 1
+
+#define BOOT_SIGNATURE 0x80
+#define NON_BOOT_SIGNATURE 0x0
+
+#define SYSTEM_SIGNATURE_NULL 0 //空表示无分区
+#define SYSTEM_SIGNATURE_EXTERN 0x5 //扩展分区
+#define BOOT_SECTOR_MAGIC_NUMBER 0xAA55 //小端是反着来的
 /*
 分区结构
 */
@@ -29,6 +36,27 @@ struct Partition{
     struct bitmap inode_bitmap; //inode位图
     struct list opened_inodes; //打开的inode节点队列
 };
+
+/*分区表项*/
+struct Partition_table_entry {
+    uint8_t boot_signature;//引导标志 一般就两个值0x80和0, 0x80表示是有引导代码的 ,0为非活动分区
+    uint8_t start_head;//CHS寻址方式，起始磁头
+    uint8_t start_sector;//起始扇区，本字节低六位
+    uint8_t start_cylinder;//起始磁道(柱面)，startSector高二位和本字节
+    uint8_t system_signature;//文件系统类型标志
+    uint8_t end_head;//终止磁头
+    uint8_t end_sector;//终止扇区
+    uint8_t end_cylinder;//终止磁道
+    uint32_t start_sectorNo;//LBA寻址，起始扇区号
+    uint32_t total_sectorsNum;//该分区扇区总数
+} __attribute__ ((packed));
+
+//初始扇区对应的结构
+struct Boot_secotr{
+    uint8_t other[446]; //如果是引导扇区就是对应的代码
+    struct Partition_table_entry partition_table[4] ;//4个表项目
+    uint16_t magic_number; //0x55 0xaa是有效扇区的签名
+} __attribute__ ((packed));
 
 
 struct Disk{
@@ -80,6 +108,14 @@ void select_disk_and_sector(struct Disk* p_disk, uint32_t lba_addr, uint32_t sec
 @param cmd: uint8_t :操作命令
 */
 void send_disk_operator_cmd(struct Disk* p_disk, uint8_t cmd);
+
+/*
+@brief 向磁盘发送命令, 但不需要中断，需要使用轮询处理, 用于identify命令在无磁盘时候不会有中断的情况
+@param p_disk: struct Disk* : 磁盘数据结构地址
+@param cmd: uint8_t :操作命令
+*/
+void send_disk_operator_cmd_without_intr(struct Disk* p_disk, uint8_t cmd);
+
 
 /*
 @brief 从准备好数据的磁盘里读取数据到buff
