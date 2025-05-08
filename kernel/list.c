@@ -50,11 +50,7 @@ bool list_empty(struct list* p_list){
     return p_list->head.next == &(p_list->tail);
 }
 
-/*
-@brief 获取链表长度
-@param p_list:struct list* : 链表地址
-@return size_t: 链表长度
-*/
+
 size_t list_len(struct list* p_list){
     int length = 0;
     struct list_node* iter = p_list->head.next;
@@ -75,4 +71,18 @@ bool find_node(struct list* p_list, struct list_node* p_node){
         iter = iter->next;
     }
     return false;
+}
+
+
+struct list_node* list_traversal(struct list* p_list, list_traversal_callback func, int arg){
+    struct list_node* iter = p_list->head.next;
+    struct list_node* res = NULL;
+    while(iter != &(p_list->tail)){
+        if(func(iter,arg)){
+            res = iter;
+            break;
+        }
+        iter = iter->next;
+    }
+    return res;
 }

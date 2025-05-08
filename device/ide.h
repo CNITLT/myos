@@ -19,23 +19,9 @@
 #define BOOT_SIGNATURE 0x80
 #define NON_BOOT_SIGNATURE 0x0
 
-#define SYSTEM_SIGNATURE_NULL 0 //空表示无分区
+#define SYSTEM_SIGNATURE_EMPTY 0 //空表示无分区
 #define SYSTEM_SIGNATURE_EXTERN 0x5 //扩展分区
 #define BOOT_SECTOR_MAGIC_NUMBER 0xAA55 //小端是反着来的
-/*
-分区结构
-*/
-struct Partition{
-    uint32_t start_lba; //起始扇区
-    uint32_t size_sector; //扇区数
-    struct Disk* p_disk; //所属磁盘
-    struct list_node part_tag; //用于队列的标记
-    char name[PARTITION_NAME_SIZE]; //分区名字
-    struct Super_block* super_block;//本分区的超级块
-    struct bitmap block_bitmap; //块位图
-    struct bitmap inode_bitmap; //inode位图
-    struct list opened_inodes; //打开的inode节点队列
-};
 
 /*分区表项*/
 struct Partition_table_entry {
@@ -47,9 +33,27 @@ struct Partition_table_entry {
     uint8_t end_head;//终止磁头
     uint8_t end_sector;//终止扇区
     uint8_t end_cylinder;//终止磁道
-    uint32_t start_sectorNo;//LBA寻址，起始扇区号
-    uint32_t total_sectorsNum;//该分区扇区总数
+    uint32_t start_sector_lba;//LBA寻址，起始扇区号
+    uint32_t total_sector_num;//该分区扇区总数
 } __attribute__ ((packed));
+
+/*
+分区结构
+*/
+struct Partition{
+    struct Partition_table_entry partition_table_entry;//原始分区表项数据
+    uint32_t start_lba; //起始扇区, 从磁盘0扇区为起点
+    uint32_t size_sector; //扇区数
+    struct Disk* p_disk; //所属磁盘
+    struct list_node part_tag; //用于队列的标记
+    char name[PARTITION_NAME_SIZE]; //分区名字
+    struct Super_block* super_block;//本分区的超级块
+    struct bitmap block_bitmap; //块位图
+    struct bitmap inode_bitmap; //inode位图
+    struct list opened_inodes; //打开的inode节点队列
+};
+
+
 
 //初始扇区对应的结构
 struct Boot_secotr{
@@ -63,9 +67,12 @@ struct Disk{
     char name[DISK_NAME_SIZE]; //磁盘名
     struct Ide_channel* p_ide_channel; //磁盘所属的ide通道
     uint8_t dev_number; //主盘是0， 从盘是1
-    struct Partition primary_parts[PRIMARY_PART_SIZE]; //主分区 最多4个
+    struct Partition primary_parts[PRIMARY_PART_SIZE]; //主分区 最多4个 
     struct Partition logic_parts[LOGIC_PART_SIZE]; //逻辑分区 有最多支持数，由宏设定
     bool exist_flag; //磁盘是否存在
+    //可用的主分区和逻辑分区个数
+    int used_paimary_parts_size;
+    int used_logic_parts_size;
 };
 
 
@@ -174,6 +181,9 @@ bool ide_identify(struct Disk* p_disk, void* buff);
 */
 void disk_interrupt_func(void);
 
-
-
+/*
+@brief 扫描磁盘上的分区
+@param p_disk: struct Disk* : 磁盘数据结构地址
+*/
+void disk_partition_scan(struct Disk* p_disk);
 #endif 

@@ -16,6 +16,10 @@ struct list{
 };
 
 /* 自定义函数类型,用于在list_traversal中做回调函数 */
+/*
+int 是用来判断某个node对应的结构有没有符合的目标
+bool true就代表有，false没有，为true的话list_traversal就可以停止了
+*/
 typedef bool list_traversal_callback(struct list_node*, int);
 
 /*
@@ -72,6 +76,14 @@ bool list_empty(struct list* p_list);
 @return size_t: 链表长度
 */
 size_t list_len(struct list* p_list);
+
+
+/*
+@brief 对列表的所有节点运用func函数，若函数返回true则停止，返回对应的那个节点
+@param p_list:struct list* : 链表地址
+@param func: list_traversal_callback : 对节点需要调用的函数
+@param arg: int : func函数需要的参数， 用来判断某个node对应的结构有没有符合的目标
+*/
 struct list_node* list_traversal(struct list* p_list, list_traversal_callback func, int arg);
 
 

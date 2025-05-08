@@ -5,6 +5,8 @@
 #include "interrupt.h"
 #include "thread.h"
 #include "string.h"
+#include "memory.h"
+#include "syscall.h"
 #define ide_reg_data(p_ide_channel) (p_ide_channel->port_base + 0)
 #define ide_reg_error(p_ide_channel) (p_ide_channel->port_base + 1)
 #define ide_reg_sector_count(p_ide_channel) (p_ide_channel->port_base + 2)
@@ -54,11 +56,13 @@
 
 uint8_t g_channel_count; //当前通道数
 struct Ide_channel g_ide_channels[MAX_IDE_CHANNEL_COUNT]; //最大支持2个IDE通道 4个硬盘
+struct list g_partition_list;	 // 分区队列,只链接了能写数据的分区。启动分区就没放里面
 
 void ide_init(){
     uint8_t disk_count = *((uint8_t*)(0x475));//这个地址放着由BIOS检测到的磁盘个数;
 
     printf("disk_count:%d\n", disk_count);
+    list_init(&g_partition_list);
 
     g_channel_count = DIV_ROUND_UP(disk_count, 2);
     g_ide_channels[0].port_base = 0x1f0;
@@ -95,13 +99,7 @@ void ide_init(){
                 p_disk->name[0] = 's';
                 p_disk->name[1] = 'd';
                 p_disk->name[2] = 'a' + disk_init_done;
-                if(!(i == 0 && j == 0)) {
-                    //第一个磁盘只用来存代码的，没有划分分区
-                    //余下的磁盘才进行划分
-                    
-
-                }
-                
+                disk_partition_scan(p_disk);
                 disk_init_done++;
             }
         }
@@ -184,8 +182,8 @@ void ide_read(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t secto
     struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
 
     lock(&p_ide_channel->lock);
-    uint32_t single_op_sector_count; //单次操作的扇区数，不能超256
-    uint32_t sector_done;//已经完成的扇区数
+    uint32_t single_op_sector_count = 1; //单次操作的扇区数，不能超256
+    uint32_t sector_done = 0;//已经完成的扇区数
     while(sector_done < sector_count){
         //计算单次操作的扇区数
         if(sector_done + 256 < sector_count){
@@ -221,8 +219,8 @@ void ide_write(struct Disk* p_disk, uint32_t lba_addr, void* buff, uint32_t sect
     struct Ide_channel* p_ide_channel = p_disk->p_ide_channel;
 
     lock(&p_ide_channel->lock);
-    uint32_t single_op_sector_count; //单次操作的扇区数，不能超256
-    uint32_t sector_done;//已经完成的扇区数
+    uint32_t single_op_sector_count = 1; //单次操作的扇区数，不能超256
+    uint32_t sector_done = 0;//已经完成的扇区数
     while(sector_done < sector_count){
         //计算单次操作的扇区数
         if(sector_done + 256 < sector_count){
@@ -259,7 +257,7 @@ void disk_interrupt_func(void){
     struct Ide_channel* p_ide_channel = &g_ide_channels[ide_channel_number];
     assert(p_ide_channel->interrupt_number == interrupt_number);
 
-    debug("disk_interrupt_func\n");
+    //debug("disk_interrupt_func\n");
     if(p_ide_channel->expecting_intr_flag){
         //说明操作完成
         //读取status让磁盘知道中断已经被处理
@@ -325,4 +323,134 @@ bool ide_identify(struct Disk* p_disk, void* buff){
     printf("disk sector:%d\n", disk_size_sector);
     printf("disk capacity:%d MB \n", disk_size_sector*512 / 1024 / 1024);
     return true;
+}
+
+
+
+static struct list_node* pf_disk_part_info(struct list_node*node, int arg){
+    struct Partition* p_part = elem2entry(struct Partition, part_tag, node);
+    printf("name:%s start:%d size:%d\n", p_part->name,p_part->start_lba,p_part->size_sector);
+    //打印用所以返回false
+    return false;
+}
+
+void disk_partition_scan(struct Disk* p_disk){
+    struct Boot_secotr * p_boot_secotr = sys_malloc(sizeof(struct Boot_secotr));
+    debug("disk_partition_scan before ide_read\n");
+    ide_read(p_disk, 0, p_boot_secotr,1);
+    
+    uint8_t* p_table_hex = p_boot_secotr->partition_table;
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 16; j++){
+            printf("%x ", p_table_hex[i*16 + j]);
+        }
+        printf("\n");
+    }
+    
+    
+   /*
+   这里不处理太多额外情况，只处理以下
+   在主分区表里的启动扇区
+   主分区
+   逻辑分区
+   逻辑分区里如果有启动扇区那也不管，直接当普通分区用, 虽然这个项目里也不会有这种情况
+   */
+    //先处理主分区
+    struct Partition_table_entry* p_table = &p_boot_secotr->partition_table;
+    p_disk->used_paimary_parts_size = 0;
+    struct Partition* ext_part = NULL;
+    for(int i = 0; i < 4; i++){
+        struct Partition_table_entry* p_entry = p_table + i;
+        if(p_entry->boot_signature == BOOT_SIGNATURE
+        || p_entry->system_signature != SYSTEM_SIGNATURE_EMPTY){
+            //主分区下的启动分区
+            int index = p_disk->used_paimary_parts_size++;
+            struct Partition* p_part = &p_disk->primary_parts[index];
+            memset(p_part,0,sizeof(*p_part));
+            p_part->partition_table_entry = *p_entry;
+            p_part->start_lba = p_entry->start_sector_lba;
+            p_part->size_sector = p_entry->total_sector_num;
+            p_part->p_disk = p_disk;
+            //分区命名从1开始
+            sprintf(p_part->name, "%s%d",p_disk->name, index+1);
+            list_init(&p_part->opened_inodes);
+
+            if(p_entry->system_signature == SYSTEM_SIGNATURE_EXTERN){
+                if(ext_part){
+                    PANIC("disk_partition_scan faild!\nError:mutil ext partition\n");
+                }
+                ext_part = p_part;
+            }
+            else{
+                if(p_entry->boot_signature != BOOT_SIGNATURE){
+                    //加入列表
+                    list_push_back(&g_partition_list,&p_part->part_tag);
+                }
+            }
+        }
+    }
+
+    //处理扩展分区
+    //扩展分区内的EBR内的表项目只用前两个
+    //第一个以当前子扩展分区的起点为偏移基准的数据分区
+    //第二个以主分区的扩展分区的起点为偏移基准的下一个子扩展分区, 就是一个指针
+    /*
+    手动改了一个扩展分区表的数据，如果主分区划分了两个数据分区
+    fdisk命令不认第二个数据分区，直接忽略
+    这里就不处理例外了，直接第一个是数据分区，第二个是指针，如果不是这种结构就报错
+    */
+    p_disk->used_logic_parts_size = 0;
+    if(ext_part){
+        const int ext_part_start_lba = ext_part->start_lba;
+        int next_ebr_lba = ext_part_start_lba;
+        
+        while(next_ebr_lba){
+            ide_read(p_disk, next_ebr_lba, p_boot_secotr,1);
+            struct Partition_table_entry* p_entry_part = &p_boot_secotr->partition_table[0];
+            struct Partition_table_entry* p_entry_next = &p_boot_secotr->partition_table[1];
+            
+            //检测下格式是否满足
+            if(p_entry_part->system_signature == SYSTEM_SIGNATURE_EMPTY
+            || p_entry_part->system_signature == SYSTEM_SIGNATURE_EXTERN){
+                PANIC("disk_partition_scan faild!\nError:unsupport ext partition format\n");
+            }
+
+
+            int index = p_disk->used_logic_parts_size++;
+            struct Partition* p_part = &p_disk->logic_parts[index];
+            memset(p_part,0,sizeof(*p_part));
+
+            p_part->partition_table_entry = *p_entry_part;
+            p_part->start_lba = p_entry_part->start_sector_lba + next_ebr_lba;
+            p_part->size_sector = p_entry_part->total_sector_num;
+            p_part->p_disk = p_disk;
+            //逻辑分区命名从5开始
+            sprintf(p_part->name, "%s%d",p_disk->name, index+5);
+            list_init(&p_part->opened_inodes);
+            //加入列表
+            list_push_back(&g_partition_list,&p_part->part_tag);            
+            
+            /*
+            uint8_t *p = (uint8_t *)p_entry_next;
+            for(int i = 0; i < 16;i++){
+                printf("%x ", p[i]);
+            }
+            printf("\n");
+            */
+
+            if(p_entry_next->system_signature == SYSTEM_SIGNATURE_EXTERN){
+                next_ebr_lba = ext_part_start_lba + p_entry_next->start_sector_lba;
+            }   
+            else if(p_entry_next->system_signature == SYSTEM_SIGNATURE_EMPTY) {
+                next_ebr_lba = 0;
+            }
+            else{
+                PANIC("disk_partition_scan faild!\nError:unsupport ext partition format\n");
+            }
+        }
+        
+    }
+    sys_free(p_boot_secotr);
+    //打印一下列表
+    list_traversal(&g_partition_list,pf_disk_part_info,0) ;
 }

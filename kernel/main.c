@@ -86,7 +86,11 @@ void init_thread(void *args){
     while(1){     
         //get_interrupt_state();
         void* p = sys_malloc(4096) ;
-        printf("kernel thread:%d ret:0x%x\n",getpid(),p);
+        char *str[512];
+        memset(str,0,sizeof(str));
+
+        sprintf(str, "kernel thread:%d ret:0x%x\n",getpid(),p);
+        printf("%s", str);
         sys_free(p);
         sleep_ms(2000);
         //printf("sleep 1s\n");

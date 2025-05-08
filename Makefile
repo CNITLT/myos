@@ -17,7 +17,7 @@ $(notdir $(wildcard ./kernel/*.c ./device/*.c ./lib/*.c ./lib/kernel/*.c ./lib/u
 all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/kernel.bin
 	$(dd) if=$(BUILD_DIR)/mbr.bin count=1
 	$(dd) if=$(BUILD_DIR)/loader.bin count=4 seek=2
-	$(dd) if=$(BUILD_DIR)/kernel.bin count=200 seek=9
+	$(dd) if=$(BUILD_DIR)/kernel.bin count=400 seek=9
 	readelf -h $(BUILD_DIR)/kernel.bin | grep 入口点
 	rm -rf c.img.lock
 	

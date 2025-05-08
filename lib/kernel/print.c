@@ -99,6 +99,27 @@ void put_int(int32_t num){
     }
 }
 
+int s_put_int(int32_t num, char * buff){
+    char *p = buff;
+    if(num < 0){
+        //put_char('-');
+        *(p++) = '-';
+        num *= -1;
+    }
+    char stack[10];//10个字节足够存下int32范围的所有位数了
+    int i = 0;
+    do{
+        stack[i] = '0' + num % 10;
+        i++;
+        num /= 10;
+    }while(num != 0);
+    for(;i>0; i--){
+        //put_char(stack[i-1]);
+        *(p++) = stack[i-1];
+    }
+    return (int)(p - buff);
+}
+
 void put_hex(uint32_t num){
     uint8_t stack[8];
     int i = 0;
@@ -118,6 +139,29 @@ void put_hex(uint32_t num){
     }
 }
 
+
+int s_put_hex(uint32_t num, char * buff){
+    uint8_t stack[8];
+    int i = 0;
+    char *p = buff;
+    do{
+       stack[i] = num % 16;
+       num /= 16;
+       i++;
+    }while(num != 0);
+    for(;i>0;i--){
+        uint8_t ch = stack[i-1];
+        if(ch <= 9){
+            //put_char('0' + ch);
+            *(p++) = '0' + ch;
+        }
+        else{
+            //put_char('A' + ch - 10);
+            *(p++) = 'A' + ch - 10;
+        }
+    }
+    return (int)(p - buff);
+}
 
 void put_hex64(uint64_t num){
     uint8_t stack[16];
@@ -235,4 +279,53 @@ void sync_printf(const char * p,...){
     }
     va_end(ap); 
     unlock(&pf_mutex);
+}
+
+
+int sprintf(char *buff, const char*p, ...){
+    va_list ap;
+    va_start(ap, p);
+    char * buff_start = buff;
+    while(*p){
+        char c = *p;
+        if(c != '%'){    
+            //put_char(c);
+            *(buff++) = c;
+            p++;
+            continue;
+        }
+        else{
+            p++;
+            c = *p;
+            assert(c == '%' || c == 'd' || c== 'f' || c == 's' || c == 'x' || c == 'c');
+            if(c == '%'){
+                //put_char('%'); 
+                *(buff++) = '%';
+            }
+            else if(c == 'd'){
+                int num = va_arg(ap, int);
+                //put_int(num);
+                buff += s_put_int(num, buff);
+            }
+            else if (c == 's'){
+                char * p_str = va_arg(ap, char *);
+                //put_str(p_str);
+                while(*p_str){
+                    *(buff++) = *(p_str++);
+                }
+            }
+            else if(c == 'x'){
+                uint32_t numx = va_arg(ap, uint32_t);
+                //put_hex(numx);
+                buff += s_put_hex(numx, buff);
+            }
+            else if(c == 'c'){
+                char param_char = va_arg(ap, char);
+                //put_char(param_char);
+                *(buff++) = param_char;
+            } 
+            ++p;   
+        }
+    }
+    va_end(ap); 
 }

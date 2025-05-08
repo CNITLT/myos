@@ -39,10 +39,24 @@ void put_str(char* str);
 void put_int(int32_t num);
 
 /*
+@brief 以十进制输出数字到buff内
+@param num:int32_t 输出的数字
+@return int:返回写入的字符数
+*/
+int s_put_int(int32_t num, char * buff);
+
+/*
 @brief 在当前光标位置以十六进制输出数字
 @param num:uint32_t 输出的数字
 */
 void put_hex(uint32_t num);
+
+/*
+@brief 以十六进制输出数字到buff内
+@param num:uint32_t 输出的数字
+@return int:返回写入的字符数
+*/
+int s_put_hex(uint32_t num, char * buff);
 
 /*
 @brief 在当前光标位置以十六进制输出数字
@@ -80,5 +94,9 @@ void roll_up();
 */
 void sync_printf(const char * p,...);
 
-
+/*
+@brief 原sprintf的仿制品，仅支持 %d %s %x %c
+@return int:写入buff的字符数
+*/
+int sprintf(char *buff, const char*p, ...);
 #endif
