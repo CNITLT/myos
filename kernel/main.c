@@ -27,8 +27,10 @@ void thread1(void* args){
     while(1){
         //sync_printf("thread1:%x read:%c\n", thread1, read_ascii_from_keyboard_ioqueue()); 
         //thread_yield();//这个让渡还是得放开，不然就一个线程先全部读完，调度，第二个线程还是没得读
-        printf("thread1\n");
-        sleep_ms(2000);
+        //printf("thread1\n");
+        //sleep_ms(2000);
+        char key = read_ascii_from_keyboard_ioqueue();
+        printf("key input:%c\n", key);
     }
 }
 
@@ -74,7 +76,7 @@ void init_thread(void *args){
     close_interrupt();
     //注册时钟中断函数
     //register_interrupt_func(0x20, timer_interrupt); 
-    //thread_start("thread1",1,thread1,NULL);
+    thread_start("thread1",1,thread1,NULL);
     //thread_start("thread2",1,thread2,NULL);
     init_idle_thread();
     //process_execute(process1,"p1");
