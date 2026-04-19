@@ -13,6 +13,6 @@ enum file_types {
     FT_UNKNOWN = 0, // 未知
     FT_REGULLAR, // 普通文件
     FT_DIRECTORY, // 目录
-}
+};
 
 #endif
