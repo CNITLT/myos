@@ -9,7 +9,7 @@
 #define I_NODE_LAYER1_BLOCK_SIZE 1
 
 
-struct inode
+struct Inode
 {
     uint32_t i_no; // inode编号
     uint32_t i_size; // 文件大小
