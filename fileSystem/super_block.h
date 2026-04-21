@@ -21,7 +21,7 @@ struct Super_block{
     uint32_t inode_bitmap_size_sector; //inode位图占的扇区大小
 
     uint32_t inode_table_lba; //inode节点表的LBA地址
-    uint32_t inode_table_siez_sector; //inode节点表占的扇区大小
+    uint32_t inode_table_size_sector; //inode节点表占的扇区大小
 
     uint32_t data_area_lba_base;//数据区的起始LBA地址
     uint32_t root_inode_no; //根目录的inode号

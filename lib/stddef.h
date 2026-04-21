@@ -5,4 +5,8 @@
 #define true (1)
 #define false (0)
 #define DIV_ROUND_UP(X, STEP) ((X + STEP - 1) / (STEP))
+
+#define MAX(a, b) (a > b? a : b)
+#define MIN(a, b) (a < b? a : b)
+
 #endif

@@ -2,6 +2,10 @@
 #include "inode.h"
 #include "super_block.h"
 #include "dir.h"
+#include "print.h"
+#include "memory.h"
+#include "string.h"
+
 void partition_format(struct Disk *hd, struct Partition *part) {
     // 目前一个block和sector是等价的
     uint32_t boot_sector_sectors = 1;
@@ -39,9 +43,57 @@ void partition_format(struct Disk *hd, struct Partition *part) {
     super_block.inode_bitmap_size_sector = inode_bitmap_sectors; // inode位图大小
 
     super_block.inode_table_lba = super_block.inode_bitmap_lba + super_block.inode_bitmap_size_sector; // inode表起点
-    super_block.inode_table_siez_sector = inode_table_sectors; // inode表大小
+    super_block.inode_table_size_sector = inode_table_sectors; // inode表大小
 
-    super_block.data_area_lba_base = super_block.inode_table_lba + super_block.inode_table_siez_sector; // 数据块起点
+    super_block.data_area_lba_base = super_block.inode_table_lba + super_block.inode_table_size_sector; // 数据块起点
     super_block.root_inode_no = 0; 
     super_block.dir_entry_size = sizeof(struct Dir_entry);
+// --- debug ----
+    printf("super_block size_sector:%d", super_block.size_sector);
+    printf("super_block inode_count:%d", super_block.inode_count);
+    printf("super_block partition_lba_base:0x%x", super_block.partition_lba_base);
+    printf("super_block block_bitmap_lba:0x%x", super_block.block_bitmap_lba);
+    printf("super_block block_bitmap_size_sector:0x%x", super_block.block_bitmap_size_sector);
+
+    printf("super_block inode_bitmap_lba:0x%x", super_block.inode_bitmap_lba);
+    printf("super_block inode_bitmap_size_sector:0x%x", super_block.inode_bitmap_size_sector);
+
+    printf("super_block inode_table_lba:0x%x", super_block.inode_table_lba);
+    printf("super_block inode_table_size_sector:0x%x", super_block.inode_table_size_sector);
+
+    printf("super_block data_area_lba_base:0x%x", super_block.data_area_lba_base);
+// --- debug ----
+
+    // 超级块写入
+    struct Disk *part_disk = part->p_disk;
+    ide_write(part_disk, part->start_lba + 1, &super_block, 1);
+    
+    // 申请位图数据库，以最大的为准，之后位图初始化可以重复使用
+    uint32_t buf_size = MAX(super_block.block_bitmap_size_sector, super_block.inode_bitmap_size_sector);
+    buf_size = MAX(buf_size, super_block.inode_table_size_sector);
+    buf_size *= SECTOR_SIZE;
+
+    Byte *buff = (Byte *)sys_malloc(buf_size);
+    memset(buff, 0, buf_size);
+
+    // blockBitMap写入
+    struct bitmap block_bitmap;
+    block_bitmap.bits = buff;
+    uint32_t real_bit_len = super_block.block_bitmap_size_sector;
+    block_bitmap.len_bit = DIV_ROUND_UP(real_bit_len, 8) * 8; // 多出一些间距, 免得触发断言
+    bitmap_init(&block_bitmap);
+    // 第0个块是根目录，先占位
+    bitmap_set(&block_bitmap, 0, BIT_STATE_USE);
+    // 最后一个字节的处理，bitmap里没有实际对应的块，置1， 笔记最小存储单位是字节，不存在的位置1
+    for (uint32_t i = real_bit_len; i < block_bitmap.len_bit; i++) {
+       bitmap_set(&block_bitmap, i, BIT_STATE_USE);
+    }
+    // 写入磁盘
+    ide_write(part_disk, super_block.block_bitmap_lba, block_bitmap.bits, super_block.block_bitmap_size_sector);
+
+    // inodeBitMap 写入
+
+    //  inodeTable 写入
+
+    sys_free(buff);
 }
