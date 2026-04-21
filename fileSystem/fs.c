@@ -92,8 +92,41 @@ void partition_format(struct Disk *hd, struct Partition *part) {
     ide_write(part_disk, super_block.block_bitmap_lba, block_bitmap.bits, super_block.block_bitmap_size_sector);
 
     // inodeBitMap 写入
-
+    memset(buff, 0, buf_size);
+    struct bitmap inode_bitmap;
+    inode_bitmap.bits = buff;
+    real_bit_len = super_block.inode_bitmap_size_sector;
+    inode_bitmap.len_bit = DIV_ROUND_UP(real_bit_len, 8) * 8; // 多出一些间距, 免得触发断言
+    bitmap_init(&inode_bitmap);
+    // 第0个块是根目录，先占位
+    bitmap_set(&inode_bitmap, 0, BIT_STATE_USE);
+    // 最后一个字节的处理，bitmap里没有实际对应的块，置1， 笔记最小存储单位是字节，不存在的位置1
+    for (uint32_t i = real_bit_len; i < inode_bitmap.len_bit; i++) {
+       bitmap_set(&inode_bitmap, i, BIT_STATE_USE);
+    }
+    // 写入磁盘
+    ide_write(part_disk, super_block.inode_bitmap_lba, inode_bitmap.bits, super_block.inode_bitmap_size_sector);
     //  inodeTable 写入
+    memset(buff, 0, buf_size); 
+    struct Inode *root_Inode = (struct  Inode *)buff;
+    root_Inode->i_no = 0;
+    root_Inode->i_size = super_block.dir_entry_size * 2;// .和..
+    root_Inode->i_sectors[0] = super_block.data_area_lba_base;
+    ide_write(part_disk, super_block.inode_table_lba, buff, super_block.inode_table_size_sector); 
+    
+    // 根目录项目写入 .和..
+    memset(buff, 0, buf_size);  
+    struct Dir_entry *p_now_entry =  (struct Dir_entry *)buff;
+    memcpy(p_now_entry->fileName, ".", 1);
+    p_now_entry->i_no = 0;
+    p_now_entry->f_type = FT_DIRECTORY;
+
+    struct Dir_entry *p_parent_entry = ++p_now_entry;
+    memcpy(p_parent_entry->fileName, "..", 2);
+    // 根目录只能指向自己
+    p_now_entry->i_no = 0;
+    p_now_entry->f_type = FT_DIRECTORY;
+    ide_write(part_disk, super_block.data_area_lba_base, buff, 1);
 
     sys_free(buff);
 }
