@@ -10,6 +10,7 @@
 #include "process.h"
 #include "syscall_init.h"
 #include "ide.h"
+#include "fs.h"
 void init_all(){
     interrupt_state old_state = close_interrupt();
     
@@ -27,4 +28,5 @@ void init_all(){
 
 void init_other_in_main_thread(){
     ide_init(); 
+    fileSystem_init();
 }

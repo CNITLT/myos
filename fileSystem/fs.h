@@ -18,9 +18,14 @@ enum File_types {
 
 /*
 @brief 为分区格式化文件系统
-@param hd: struct Disk  * :磁盘指针
 @param part: struct Partition * : 分区指针
 */
-void partition_format(struct Disk *hd, struct Partition *part);
+void partition_format(struct Partition *part);
+
+/*
+ @brief 为磁盘上所有未格式化分区创建文件系统，跳过主盘
+*/
+void fileSystem_init();
+
 
 #endif              

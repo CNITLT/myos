@@ -5,8 +5,8 @@
 #include "print.h"
 #include "memory.h"
 #include "string.h"
-
-void partition_format(struct Disk *hd, struct Partition *part) {
+#include "debug.h"
+void partition_format(struct Partition *part) {
     // 目前一个block和sector是等价的
     uint32_t boot_sector_sectors = 1;
     uint32_t super_block_sectors = 1;
@@ -49,19 +49,19 @@ void partition_format(struct Disk *hd, struct Partition *part) {
     super_block.root_inode_no = 0; 
     super_block.dir_entry_size = sizeof(struct Dir_entry);
 // --- debug ----
-    printf("super_block size_sector:%d", super_block.size_sector);
-    printf("super_block inode_count:%d", super_block.inode_count);
-    printf("super_block partition_lba_base:0x%x", super_block.partition_lba_base);
-    printf("super_block block_bitmap_lba:0x%x", super_block.block_bitmap_lba);
-    printf("super_block block_bitmap_size_sector:0x%x", super_block.block_bitmap_size_sector);
+    printf("super_block size_sector:%d\n", super_block.size_sector);
+    printf("super_block inode_count:%d\n", super_block.inode_count);
+    printf("super_block partition_lba_base:0x%x\n", super_block.partition_lba_base);
+    printf("super_block block_bitmap_lba:0x%x\n", super_block.block_bitmap_lba);
+    printf("super_block block_bitmap_size_sector:0x%x\n", super_block.block_bitmap_size_sector);
 
-    printf("super_block inode_bitmap_lba:0x%x", super_block.inode_bitmap_lba);
-    printf("super_block inode_bitmap_size_sector:0x%x", super_block.inode_bitmap_size_sector);
+    printf("super_block inode_bitmap_lba:0x%x\n", super_block.inode_bitmap_lba);
+    printf("super_block inode_bitmap_size_sector:0x%x\n", super_block.inode_bitmap_size_sector);
 
-    printf("super_block inode_table_lba:0x%x", super_block.inode_table_lba);
-    printf("super_block inode_table_size_sector:0x%x", super_block.inode_table_size_sector);
+    printf("super_block inode_table_lba:0x%x\n", super_block.inode_table_lba);
+    printf("super_block inode_table_size_sector:0x%x\n", super_block.inode_table_size_sector);
 
-    printf("super_block data_area_lba_base:0x%x", super_block.data_area_lba_base);
+    printf("super_block data_area_lba_base:0x%x\n", super_block.data_area_lba_base);
 // --- debug ----
 
     // 超级块写入
@@ -129,4 +129,33 @@ void partition_format(struct Disk *hd, struct Partition *part) {
     ide_write(part_disk, super_block.data_area_lba_base, buff, 1);
 
     sys_free(buff);
+}
+
+
+void fileSystem_init() {
+    uint32_t channel_no = 0;
+    uint32_t dev_no = 0;
+    uint32_t part_index = 0;
+
+    struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE));
+    assert(p_super_block);
+   
+    struct list_node* iter = g_partition_list.head.next;
+    struct list_node* res = NULL;
+    while(iter != &(g_partition_list.tail)){
+        // 这里遍历的都是可以写数据的分区，忽略了操作系统代码占的分区
+        struct Partition *p_part = elem2entry(struct Partition, part_tag, iter);
+        if (p_part->size_sector > 0) {
+            ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE) / SECTOR_SIZE);
+            printf("part:%s magic:0x%x\n", p_part->name, p_super_block->magic);
+            if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER) {
+                printf("part:%s init fileSystem\n", p_part->name);
+                partition_format(p_part);
+            } else {
+                printf("part:%s has fileSystem skip init\n", p_part->name); 
+            }
+        }
+        iter = iter->next;
+    }
+    sys_free(p_super_block);
 }

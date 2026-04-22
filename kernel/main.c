@@ -153,9 +153,9 @@ int main(){
 
     printf("cr3:0X%x\n",get_cr3_register()); 
     //open_interrupt();
-    init_thread_boot(init_thread, NULL);
+    //init_thread_boot(init_thread, NULL);
 
-    //init_thread_boot(main_thread_func, NULL);
+    init_thread_boot(main_thread_func, NULL);
    
     while(1);
     return 0;

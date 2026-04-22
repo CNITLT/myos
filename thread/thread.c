@@ -270,7 +270,7 @@ void main_thread_func(void *args){
     close_interrupt();
     init_idle_thread();
     open_interrupt();
-    ide_init();
+    init_other_in_main_thread();
     while(1){}
 }
 

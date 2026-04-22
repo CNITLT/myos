@@ -16,7 +16,7 @@ struct Dir
 struct Dir_entry {
     char fileName[MAX_FILE_NAME_LENGTH]; // 文件名
     uint32_t i_no; // inode节点编号
-    enum file_type f_type;
+    enum File_types f_type;
 };
 
 #endif

@@ -54,7 +54,6 @@ struct Partition{
 };
 
 
-
 //初始扇区对应的结构
 struct Boot_secotr{
     uint8_t other[446]; //如果是引导扇区就是对应的代码
@@ -76,7 +75,7 @@ struct Disk{
 };
 
 
-struct Ide_channel{
+typedef struct Ide_channel{
     char name[IDE_CHANNEL_NAME_SIZE]; //通道名
     //通道起始端口，后续部分端口是这个端口计算
     // 两IDE通道的端口分配如下
@@ -88,7 +87,12 @@ struct Ide_channel{
     bool expecting_intr_flag; //表示是否在等待中断
     struct semaphore disk_done; //用于等待磁盘操作完成的程序对应的信号量
     struct Disk devices[DISKS_PER_IDE_CHANNEL]; //通道上的磁盘
-};
+} Ide_channel;
+
+extern uint8_t g_channel_count; //当前通道数
+extern struct Ide_channel g_ide_channels[MAX_IDE_CHANNEL_COUNT]; //最大支持2个IDE通道 4个硬盘
+extern struct list g_partition_list;	 // 分区队列,只链接了能写数据的分区。启动分区就没放里面
+
 
 /*
 @brief 初始化硬盘数据结构
