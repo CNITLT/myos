@@ -137,7 +137,7 @@ void fileSystem_init() {
     uint32_t dev_no = 0;
     uint32_t part_index = 0;
 
-    struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE));
+    struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE) * SECTOR_SIZE);
     assert(p_super_block);
    
     struct list_node* iter = g_partition_list.head.next;
@@ -146,7 +146,7 @@ void fileSystem_init() {
         // 这里遍历的都是可以写数据的分区，忽略了操作系统代码占的分区
         struct Partition *p_part = elem2entry(struct Partition, part_tag, iter);
         if (p_part->size_sector > 0) {
-            ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE) / SECTOR_SIZE);
+            ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, DIV_ROUND_UP(sizeof(struct Super_block), SECTOR_SIZE));
             printf("part:%s magic:0x%x\n", p_part->name, p_super_block->magic);
             if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER) {
                 printf("part:%s init fileSystem\n", p_part->name);
