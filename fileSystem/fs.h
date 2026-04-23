@@ -32,4 +32,8 @@ void fileSystem_init();
 */
 void load_partition(char *part_name);
 
+/*
+@brief 加载默认的分区，即第一个
+*/
+void load_default_partition();
 #endif              

@@ -131,7 +131,6 @@ void partition_format(struct Partition *part) {
     p_now_entry->i_no = 0;
     p_now_entry->f_type = FT_DIRECTORY;
     ide_write(part_disk, super_block.data_area_lba_base, buff, 1);
-
     sys_free(buff);
 }
 
@@ -151,7 +150,7 @@ void fileSystem_init() {
         struct Partition *p_part = elem2entry(struct Partition, part_tag, iter);
         if (p_part->size_sector > 0) {
             ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, 1);
-            printf("part:%s magic:0x%x\n", p_part->name, p_super_block->magic);
+            printf("part:%s magic:0x%x size:%d\n", p_part->name, p_super_block->magic, p_part->size_sector);
             if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER) {
                 printf("part:%s init fileSystem\n", p_part->name);
                 partition_format(p_part);
@@ -161,6 +160,7 @@ void fileSystem_init() {
         }
         iter = iter->next;
     }
+    
     sys_free(p_super_block);
 }
 
@@ -200,4 +200,10 @@ void load_partition(char *part_name) {
         }
         iter = iter->next;
     }
+}
+
+void load_default_partition() {
+    struct list_node* iter = g_partition_list.head.next;
+    struct Partition *p_part = elem2entry(struct Partition, part_tag, iter); 
+    load_partition(p_part->name);
 }
