@@ -193,6 +193,8 @@ void load_partition(char *part_name) {
                 p_part->inode_bitmap.len_bit = inode_bit_map_size * 8;
                 // 链表初始化，其实这里算是重复初始化的，之前有过一次,保险点多一次也无所谓
                 list_init(&p_part->opened_inodes);
+                printf("load part:%s size sector:%d", p_part->name, p_part->size_sector);
+                return;
             } else {
                 // 加载过的直接改变指针就行
                 g_current_part = p_part;

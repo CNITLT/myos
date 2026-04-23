@@ -5,6 +5,8 @@
 #include "stddef.h"
 #include "memory.h"
 #define STACK_OVERFLOW_MAGIC_NUM 0xCCCCCCCC
+// 单个进程最大的文件描述符个数
+#define MAX_FILES_OPEN_PER_PROC 8
 //通用线程函数类型
 typedef void thread_func(void*);
 //该类型的指针
@@ -93,6 +95,7 @@ struct task_struct {
 
    uint8_t ticks;//剩余可运行的时钟滴答数
    uint32_t elapsed_ticks;//总共运行了的时种滴答数
+   int32_t fd_table[MAX_FILES_OPEN_PER_PROC]; // 文件描述符数组
    struct list_node general_tag;//一般队列中的节点
    struct list_node all_list_tag;//总队列中的节点
    vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址

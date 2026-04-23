@@ -29,4 +29,5 @@ void init_all(){
 void init_other_in_main_thread(){
     ide_init(); 
     fileSystem_init();
+    load_default_partition();
 }
