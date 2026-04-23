@@ -95,9 +95,9 @@ void init_pcb(struct task_struct* pcb, char* name, int priority){
     pcb->self_kernel_stack = (vaddr_t)((uint32_t)pcb + PAGE_SIZE);
 
     // 预留的标准输入输出初始化为正确的值，其他为-1
-    // for (int i = 0; i < MAX_FILES_OPEN_PER_PROC; i++) {
-    //     pcb->fd_table[i] = i < 3 ? i : -1;
-    // }
+    for (int i = 0; i < MAX_FILES_OPEN_PER_PROC; i++) {
+        pcb->fd_table[i] = i < 3 ? i : -1;
+    }
 
     pcb->stack_magic = STACK_OVERFLOW_MAGIC_NUM;
 }

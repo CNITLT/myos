@@ -84,6 +84,7 @@ struct thread_stack {
    void* func_arg;    // 由Kernel_thread所调用的函数所需的参数
 };
 
+// PCB新增数据需要make clean一下，不然有些地方会报错，可能是遗留了之前内存布局的编译文件没有改
 /* 进程或线程的pcb,程序控制块 */
 struct task_struct {
    vaddr_t self_kernel_stack;	 // 各内核线程都用自己的内核栈, 基本上是指向PCB高地址的地方, 也即存ESP的位置
@@ -95,7 +96,7 @@ struct task_struct {
 
    uint8_t ticks;//剩余可运行的时钟滴答数
    uint32_t elapsed_ticks;//总共运行了的时种滴答数
-   // int32_t fd_table[MAX_FILES_OPEN_PER_PROC]; // 文件描述符数组
+   int32_t fd_table[MAX_FILES_OPEN_PER_PROC]; // 文件描述符数组
    struct list_node general_tag;//一般队列中的节点
    struct list_node all_list_tag;//总队列中的节点
    vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址
