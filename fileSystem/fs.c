@@ -34,47 +34,47 @@ void partition_format(struct Partition *part) {
 /*
     | OBR(1) | superBlock(1) | blockBitMap(?) | inodeBitMap(?)  |  inodeTable(?) | rootDir(视为数据块) | free |
 */
-    struct Super_block super_block;
+    struct Super_block *p_super_block = sys_malloc(sizeof(struct Super_block));
    
-    super_block.magic = SUPER_BLOCK_MAGIC_NUMBER;  // 魔数
-    super_block.size_sector = part->size_sector;  // 总扇区数
-    super_block.inode_count = MAX_FILES_PER_PART; // inode总数
-    super_block.partition_lba_base = part->start_lba; // 起点
-    super_block.block_bitmap_lba = super_block.partition_lba_base + 2;     // 块位图起点
-    super_block.block_bitmap_size_sector = block_bitmap_sectors; // 块位图大小
+    p_super_block->magic = SUPER_BLOCK_MAGIC_NUMBER;  // 魔数
+    p_super_block->size_sector = part->size_sector;  // 总扇区数
+    p_super_block->inode_count = MAX_FILES_PER_PART; // inode总数
+    p_super_block->partition_lba_base = part->start_lba; // 起点
+    p_super_block->block_bitmap_lba = p_super_block->partition_lba_base + 2;     // 块位图起点
+    p_super_block->block_bitmap_size_sector = block_bitmap_sectors; // 块位图大小
 
-    super_block.inode_bitmap_lba = super_block.block_bitmap_lba + super_block.block_bitmap_size_sector; // inode位图起点
-    super_block.inode_bitmap_size_sector = inode_bitmap_sectors; // inode位图大小
+    p_super_block->inode_bitmap_lba = p_super_block->block_bitmap_lba + p_super_block->block_bitmap_size_sector; // inode位图起点
+    p_super_block->inode_bitmap_size_sector = inode_bitmap_sectors; // inode位图大小
 
-    super_block.inode_table_lba = super_block.inode_bitmap_lba + super_block.inode_bitmap_size_sector; // inode表起点
-    super_block.inode_table_size_sector = inode_table_sectors; // inode表大小
+    p_super_block->inode_table_lba = p_super_block->inode_bitmap_lba + p_super_block->inode_bitmap_size_sector; // inode表起点
+    p_super_block->inode_table_size_sector = inode_table_sectors; // inode表大小
 
-    super_block.data_area_lba_base = super_block.inode_table_lba + super_block.inode_table_size_sector; // 数据块起点
-    super_block.root_inode_no = 0; 
-    super_block.dir_entry_size = sizeof(struct Dir_entry);
+    p_super_block->data_area_lba_base = p_super_block->inode_table_lba + p_super_block->inode_table_size_sector; // 数据块起点
+    p_super_block->root_inode_no = 0; 
+    p_super_block->dir_entry_size = sizeof(struct Dir_entry);
 // --- debug ----
-    printf("super_block size_sector:%d\n", super_block.size_sector);
-    printf("super_block inode_count:%d\n", super_block.inode_count);
-    printf("super_block partition_lba_base:0x%x\n", super_block.partition_lba_base);
-    printf("super_block block_bitmap_lba:0x%x\n", super_block.block_bitmap_lba);
-    printf("super_block block_bitmap_size_sector:0x%x\n", super_block.block_bitmap_size_sector);
+    printf("super_block size_sector:%d\n", p_super_block->size_sector);
+    printf("super_block inode_count:%d\n", p_super_block->inode_count);
+    printf("super_block partition_lba_base:0x%x\n", p_super_block->partition_lba_base);
+    printf("super_block block_bitmap_lba:0x%x\n", p_super_block->block_bitmap_lba);
+    printf("super_block block_bitmap_size_sector:0x%x\n", p_super_block->block_bitmap_size_sector);
 
-    printf("super_block inode_bitmap_lba:0x%x\n", super_block.inode_bitmap_lba);
-    printf("super_block inode_bitmap_size_sector:0x%x\n", super_block.inode_bitmap_size_sector);
+    printf("super_block inode_bitmap_lba:0x%x\n", p_super_block->inode_bitmap_lba);
+    printf("super_block inode_bitmap_size_sector:0x%x\n", p_super_block->inode_bitmap_size_sector);
 
-    printf("super_block inode_table_lba:0x%x\n", super_block.inode_table_lba);
-    printf("super_block inode_table_size_sector:0x%x\n", super_block.inode_table_size_sector);
+    printf("super_block inode_table_lba:0x%x\n", p_super_block->inode_table_lba);
+    printf("super_block inode_table_size_sector:0x%x\n", p_super_block->inode_table_size_sector);
 
-    printf("super_block data_area_lba_base:0x%x\n", super_block.data_area_lba_base);
+    printf("super_block data_area_lba_base:0x%x\n", p_super_block->data_area_lba_base);
 // --- debug ----
 
     // 超级块写入
     struct Disk *part_disk = part->p_disk;
-    ide_write(part_disk, part->start_lba + 1, &super_block, 1);
+    ide_write(part_disk, part->start_lba + 1, p_super_block, 1);
     
     // 申请位图数据库，以最大的为准，之后位图初始化可以重复使用
-    uint32_t buf_size = MAX(super_block.block_bitmap_size_sector, super_block.inode_bitmap_size_sector);
-    buf_size = MAX(buf_size, super_block.inode_table_size_sector);
+    uint32_t buf_size = MAX(p_super_block->block_bitmap_size_sector, p_super_block->inode_bitmap_size_sector);
+    buf_size = MAX(buf_size, p_super_block->inode_table_size_sector);
     buf_size *= SECTOR_SIZE;
 
     Byte *buff = (Byte *)sys_malloc(buf_size);
@@ -83,7 +83,7 @@ void partition_format(struct Partition *part) {
     // blockBitMap写入
     struct bitmap block_bitmap;
     block_bitmap.bits = buff;
-    uint32_t real_bit_len = super_block.block_bitmap_size_sector;
+    uint32_t real_bit_len = p_super_block->block_bitmap_size_sector;
     block_bitmap.len_bit = DIV_ROUND_UP(real_bit_len, 8) * 8; // 多出一些间距, 免得触发断言
     bitmap_init(&block_bitmap);
     // 第0个块是根目录，先占位
@@ -93,13 +93,13 @@ void partition_format(struct Partition *part) {
        bitmap_set(&block_bitmap, i, BIT_STATE_USE);
     }
     // 写入磁盘
-    ide_write(part_disk, super_block.block_bitmap_lba, block_bitmap.bits, super_block.block_bitmap_size_sector);
+    ide_write(part_disk, p_super_block->block_bitmap_lba, block_bitmap.bits, p_super_block->block_bitmap_size_sector);
 
     // inodeBitMap 写入
     memset(buff, 0, buf_size);
     struct bitmap inode_bitmap;
     inode_bitmap.bits = buff;
-    real_bit_len = super_block.inode_bitmap_size_sector;
+    real_bit_len = p_super_block->inode_bitmap_size_sector;
     inode_bitmap.len_bit = DIV_ROUND_UP(real_bit_len, 8) * 8; // 多出一些间距, 免得触发断言
     bitmap_init(&inode_bitmap);
     // 第0个块是根目录，先占位
@@ -109,14 +109,14 @@ void partition_format(struct Partition *part) {
        bitmap_set(&inode_bitmap, i, BIT_STATE_USE);
     }
     // 写入磁盘
-    ide_write(part_disk, super_block.inode_bitmap_lba, inode_bitmap.bits, super_block.inode_bitmap_size_sector);
+    ide_write(part_disk, p_super_block->inode_bitmap_lba, inode_bitmap.bits, p_super_block->inode_bitmap_size_sector);
     //  inodeTable 写入
     memset(buff, 0, buf_size); 
     struct Inode *root_Inode = (struct  Inode *)buff;
     root_Inode->i_no = 0;
-    root_Inode->i_size = super_block.dir_entry_size * 2;// .和..
-    root_Inode->i_sectors[0] = super_block.data_area_lba_base;
-    ide_write(part_disk, super_block.inode_table_lba, buff, super_block.inode_table_size_sector); 
+    root_Inode->i_size = p_super_block->dir_entry_size * 2;// .和..
+    root_Inode->i_sectors[0] = p_super_block->data_area_lba_base;
+    ide_write(part_disk, p_super_block->inode_table_lba, buff, p_super_block->inode_table_size_sector); 
     
     // 根目录项目写入 .和..
     memset(buff, 0, buf_size);  
@@ -130,8 +130,9 @@ void partition_format(struct Partition *part) {
     // 根目录只能指向自己
     p_now_entry->i_no = 0;
     p_now_entry->f_type = FT_DIRECTORY;
-    ide_write(part_disk, super_block.data_area_lba_base, buff, 1);
+    ide_write(part_disk, p_super_block->data_area_lba_base, buff, 1);
     sys_free(buff);
+    sys_free(p_super_block);
 }
 
 
