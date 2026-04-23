@@ -27,5 +27,9 @@ void partition_format(struct Partition *part);
 */
 void fileSystem_init();
 
+/*
+@brief 加载指定名字的分区信息到内存里的全局变量，并初始化对应的位图信息等, 旧的分区会卸载
+*/
+void load_partition(char *part_name);
 
 #endif              

@@ -6,6 +6,10 @@
 #include "memory.h"
 #include "string.h"
 #include "debug.h"
+
+// 默认情况下的操作分区
+struct Partition *g_current_part; 
+
 void partition_format(struct Partition *part) {
     // 目前一个block和sector是等价的
     uint32_t boot_sector_sectors = 1;
@@ -158,4 +162,42 @@ void fileSystem_init() {
         iter = iter->next;
     }
     sys_free(p_super_block);
+}
+
+
+void load_partition(char *part_name) {
+    struct list_node* iter = g_partition_list.head.next;
+    struct list_node* res = NULL;
+    while(iter != &(g_partition_list.tail)){
+        struct Partition *p_part = elem2entry(struct Partition, part_tag, iter);
+        if (!strcmp(part_name, p_part->name)) {
+            // 相等
+            // 没有super_block说明之前没加载过，这里加载一下
+            if (!p_part->super_block) {
+                // 超级块信息加载
+                p_part->super_block = sys_malloc(sizeof(struct Super_block));
+                ide_read(p_part->p_disk, p_part->start_lba + 1, p_part->super_block, 1);
+
+                // 位图信息加载
+                uint32_t block_bit_map_size = (p_part->super_block->block_bitmap_size_sector) * SECTOR_SIZE;
+                Byte *p_block_bit_map = sys_malloc(block_bit_map_size);
+                ide_read(p_part->p_disk, p_part->super_block->block_bitmap_lba, p_block_bit_map, p_part->super_block->block_bitmap_size_sector);
+                p_part->block_bitmap.bits = p_block_bit_map;
+                p_part->block_bitmap.len_bit = block_bit_map_size * 8;
+
+                // inode位图信息加载
+                uint32_t inode_bit_map_size = (p_part->super_block->inode_bitmap_size_sector) * SECTOR_SIZE;
+                Byte *p_inode_bit_map = sys_malloc(inode_bit_map_size);
+                ide_read(p_part->p_disk, p_part->super_block->inode_bitmap_lba, p_inode_bit_map, p_part->super_block->inode_bitmap_size_sector);
+                p_part->inode_bitmap.bits = p_inode_bit_map;
+                p_part->inode_bitmap.len_bit = inode_bit_map_size * 8;
+                // 链表初始化，其实这里算是重复初始化的，之前有过一次,保险点多一次也无所谓
+                list_init(&p_part->opened_inodes);
+            } else {
+                // 加载过的直接改变指针就行
+                g_current_part = p_part;
+            }
+        }
+        iter = iter->next;
+    }
 }
