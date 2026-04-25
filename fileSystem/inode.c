@@ -3,18 +3,9 @@
 #include "stdint.h"
 #include "fs.h"
 #include "debug.h"
-struct Inode_position {
-    bool is_in_two_section; // 判断inode本身的信息是否跨区
-    uint32_t section_lba; // 在那块section上
-    uint32_t offset_in_section; // inode信息起点在扇区上的偏移
-};
+#include "memory.h"
+#include "string.h"
 
-/*
-    @brief 获取inode所在扇区的位置信息
-    @param p_part : struct Partition * : 扇区信息
-    @param inode_no : uint32_t:  inode编号
-    @param p_inode_position: struct Inode_position *: 返回的信息
-*/
 void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_position *p_inode_pos) {
     assert(inode_no < MAX_FILES_PER_PART);
     assert(p_inode_pos != NULL);
@@ -27,3 +18,25 @@ void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_posi
     p_inode_pos->section_lba = p_part->super_block->inode_table_lba + (inode_offset_in_table / sizeof(struct Inode));
 }
 
+void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) {
+    assert(p_part && p_inode);
+    bool need_free = false;
+    if (!io_buff) {
+        io_buff = sys_malloc(2 * SECTOR_SIZE_BYTE);
+        need_free = true;
+    }
+    struct Inode_position inode_pos;
+    inode_locate(p_part, p_inode->i_no, &inode_pos);
+    ide_read(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
+    struct Inode *p_inode_in_disk = (struct Inode *)io_buff + p_inode->i_no;
+    memcpy(p_inode_in_disk, p_inode, sizeof (struct Inode));
+    // 部分信息是运行中才有用的，直接清空
+    p_inode_in_disk->inode_tag.prev = NULL;
+    p_inode_in_disk->inode_tag.next = NULL;
+    p_inode_in_disk->i_open_cnts = 0;
+    p_inode_in_disk->write_deny = false;
+    ide_write(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
+    if (need_free) {
+        sys_free(io_buff);
+    }
+}
