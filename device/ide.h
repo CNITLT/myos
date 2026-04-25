@@ -4,6 +4,7 @@
 #include "list.h"
 #include "bitmap.h"
 #include "mutex.h"
+#include "super_block.h"
 
 #define PARTITION_NAME_SIZE 8
 #define DISK_NAME_SIZE 8

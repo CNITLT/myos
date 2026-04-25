@@ -19,5 +19,11 @@ struct Inode
     struct list_node inode_tag; // 用于内存里打开的inode列表节点
 };
 
-
+/*
+    @brief 获取inode所在扇区的位置信息
+    @param p_part : struct Partition * : 扇区信息
+    @param inode_no : uint32_t:  inode编号
+    @param p_inode_position: struct Inode_position *: 返回的信息
+*/
+void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_position *p_inode_pos);
 #endif

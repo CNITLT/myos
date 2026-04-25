@@ -15,7 +15,7 @@ void partition_format(struct Partition *part) {
     uint32_t boot_sector_sectors = 1;
     uint32_t super_block_sectors = 1;
     uint32_t inode_bitmap_sectors = DIV_ROUND_UP(MAX_FILES_PER_PART, BITS_PER_SECTOR);
-    uint32_t inode_table_sectors = DIV_ROUND_UP((sizeof(struct Inode) * MAX_FILES_PER_PART), SECTOR_SIZE);
+    uint32_t inode_table_sectors = DIV_ROUND_UP((sizeof(struct Inode) * MAX_FILES_PER_PART), SECTOR_SIZE_BYTE);
 
     // 已使用的
     uint32_t used_sectors = boot_sector_sectors + super_block_sectors + inode_bitmap_sectors + inode_table_sectors;
@@ -75,7 +75,7 @@ void partition_format(struct Partition *part) {
     // 申请位图数据库，以最大的为准，之后位图初始化可以重复使用
     uint32_t buf_size = MAX(p_super_block->block_bitmap_size_sector, p_super_block->inode_bitmap_size_sector);
     buf_size = MAX(buf_size, p_super_block->inode_table_size_sector);
-    buf_size *= SECTOR_SIZE;
+    buf_size *= SECTOR_SIZE_BYTE;
 
     Byte *buff = (Byte *)sys_malloc(buf_size);
     memset(buff, 0, buf_size);
@@ -141,7 +141,7 @@ void fileSystem_init() {
     uint32_t dev_no = 0;
     uint32_t part_index = 0;
 
-    struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(SECTOR_SIZE);
+    struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(SECTOR_SIZE_BYTE);
     assert(p_super_block);
    
     struct list_node* iter = g_partition_list.head.next;
@@ -180,14 +180,14 @@ void load_partition(char *part_name) {
                 ide_read(p_part->p_disk, p_part->start_lba + 1, p_part->super_block, 1);
 
                 // 位图信息加载
-                uint32_t block_bit_map_size = (p_part->super_block->block_bitmap_size_sector) * SECTOR_SIZE;
+                uint32_t block_bit_map_size = (p_part->super_block->block_bitmap_size_sector) * SECTOR_SIZE_BYTE;
                 Byte *p_block_bit_map = sys_malloc(block_bit_map_size);
                 ide_read(p_part->p_disk, p_part->super_block->block_bitmap_lba, p_block_bit_map, p_part->super_block->block_bitmap_size_sector);
                 p_part->block_bitmap.bits = p_block_bit_map;
                 p_part->block_bitmap.len_bit = block_bit_map_size * 8;
 
                 // inode位图信息加载
-                uint32_t inode_bit_map_size = (p_part->super_block->inode_bitmap_size_sector) * SECTOR_SIZE;
+                uint32_t inode_bit_map_size = (p_part->super_block->inode_bitmap_size_sector) * SECTOR_SIZE_BYTE;
                 Byte *p_inode_bit_map = sys_malloc(inode_bit_map_size);
                 ide_read(p_part->p_disk, p_part->super_block->inode_bitmap_lba, p_inode_bit_map, p_part->super_block->inode_bitmap_size_sector);
                 p_part->inode_bitmap.bits = p_inode_bit_map;

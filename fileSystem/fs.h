@@ -4,11 +4,9 @@
 // 分区最大文件数
 #define MAX_FILES_PER_PART 4096
 
-// 扇区字节数
-#define SECTOR_SIZE 512 
 // 每扇区的位数
-#define BITS_PER_SECTOR (SECTOR_SIZE*8)  
-#define BLOCK_SIZE SECTOR_SIZE
+#define BITS_PER_SECTOR (SECTOR_SIZE_BYTE*8)  
+#define BLOCK_SIZE SECTOR_SIZE_BYTE
 
 enum File_types {
     FT_UNKNOWN = 0, // 未知
