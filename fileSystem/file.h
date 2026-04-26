@@ -2,6 +2,7 @@
 #define __FILESYSTEM_FILE_H
 #include "stdint.h"
 #include "inode.h"
+#include "ide.h"
 // 整个系统所有进程同时打开的文件描述符数最大值
 // 同文件多次打开，算不同文件描述符
 #define MAX_FD_SIZE 256
@@ -37,4 +38,19 @@ int32_t get_free_file_slot_in_g_table();
     @return int32_t 失败返回-1， 否则返回安装位置的索引
 */
 int32_t pcb_fd_install(int32_t globa_fd_index);
+
+/*
+    @brief 从位图内分配inode节点，返回节点编号
+    @param p_part: struct Partition *: 分区信息
+    @return uint32_t 节点编号，失败返回-1
+*/
+int32_t inode_bitmap_alloc(struct Partition *p_part);
+
+
+/*
+    @brief 从位图内分配block节点，返回节点对应的扇区地址
+    @param p_part: struct Partition *: 分区信息
+    @return uint32_t 扇区地址，失败返回-1
+*/
+int32_t block_bitmap_alloc(struct Partition *p_part)
 #endif

@@ -26,3 +26,22 @@ int32_t pcb_fd_install(int32_t globa_fd_index) {
     }
     return -1;
 }
+
+int32_t inode_bitmap_alloc(struct Partition *p_part) {
+    int32_t bit_index = bitmap_find_range(&p_part->inode_bitmap, 1);
+    if (bit_index != BITMAP_RANGE_NOTFOUND) {
+        bitmap_set(&p_part->inode_bitmap, bit_index, BIT_STATE_USE);
+    }
+    return bit_index;
+}
+
+
+int32_t block_bitmap_alloc(struct Partition *p_part) {
+    int32_t bit_index = bitmap_find_range(&p_part->block_bitmap, 1);
+    if (bit_index == BITMAP_RANGE_NOTFOUND) {
+        return bit_index;
+    }
+    // 此处返回的是扇区地址
+    bitmap_set(&p_part->block_bitmap, bit_index, BIT_STATE_USE);
+    return p_part->super_block->data_area_lba_base + bit_index;
+}
