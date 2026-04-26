@@ -41,12 +41,7 @@ void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) 
     }
 }
 
-
-/**
- * @brief 从内存中已经打开的inode列表里找到有无对应的inode信息
- * 
- */
-static struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no) {
+struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no) {
     assert(p_part && inode_no < MAX_FILES_PER_PART);
     struct list_node* iter = p_part->opened_inodes.head.next;
     while(iter != &(p_part->opened_inodes.tail)){

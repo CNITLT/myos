@@ -1,6 +1,6 @@
 #include "file.h"
 #include "thread.h"
-
+#include "bitmap.h"
 static struct File g_file_table[MAX_FD_SIZE];
 
 /*
