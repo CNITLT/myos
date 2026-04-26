@@ -19,7 +19,7 @@ int32_t get_free_file_slot_in_g_table() {
 int32_t pcb_fd_install(int32_t globa_fd_index) {
     struct task_struct *pcb = get_current_pcb();
      for(int i = USED_FD_START_INDEX; i < MAX_FD_SIZE; i++) {
-        if (pcb->fd_table[i] == 0) {
+        if (pcb->fd_table[i] == -1) {
             pcb->fd_table[i] = globa_fd_index;
             return i;
         }
