@@ -45,8 +45,27 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
             }
         }
     }
-
+    // 保证项一定是在一个扇区里面，写目录的时候保证扇区末尾最后一定空间不足够赛下的时候就新开一个存
+    for (int i = 0; i < all_block_count; i++) {
+        // 因为从中间删除的话，中间是有可能有空洞的
+        if (p_all_block_lba[i] == 0) {
+            continue;
+        }
+        ide_read(p_part->p_disk, p_all_block_lba[i], buff, 1);
+        struct Dir_entry*p_dir_entry_iter = buff;
+        for (int j = 0; j < SECTOR_SIZE_BYTE / sizeof(struct Dir_entry); j++) {
+            if (!strcmp(p_dir_entry_iter->fileName, entry_name)) {
+                // 找到了就直接返回
+                memcpy(p_dir_entry, p_dir_entry_iter, sizeof(struct Dir_entry));
+                sys_free(buff);
+                sys_free(p_all_block_lba);
+                return true;
+            }
+            p_dir_entry_iter++;
+        }
+    }
 
     sys_free(buff);
     sys_free(p_all_block_lba);
+    return false;
 }
