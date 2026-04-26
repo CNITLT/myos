@@ -219,4 +219,19 @@ void *sys_malloc(size_t size);
 */
 void sys_free(void* p);
 
+
+/*
+@brief 分配指定大小的内存空间在内核上,本质还是sys_malloc
+@param size: size_t :字节为单位的空间大小
+@return void *:可用空间的首地址
+*/
+void *sys_malloc_in_kernel(size_t size);
+
+
+/*
+@brief 释放sys_malloc分配的在内核上的空间,本质还是sys_free
+@param p: void * :将要释放的sys_malloc分配的地址
+*/
+void sys_free_in_kernel(void* p);
+
 #endif

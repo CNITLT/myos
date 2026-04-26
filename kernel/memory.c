@@ -389,3 +389,26 @@ void sys_free(void* p){
     }
     
 }
+
+
+// 这两个 sys_malloc_in_kernel sys_free_in_kernel感觉不是很标准，按理来说不应该有这种临时修改，但是书上是这么搞的
+void *sys_malloc_in_kernel(size_t size) {
+    struct task_struct *pcb = get_current_pcb();
+    const vaddr_t old_page_dir = pcb->page_dir;
+    // 临时修改为null, 使得sys_malloc判断为内核, 后续分配的就是内核空间
+    pcb->page_dir = NULL;
+    void *ret = sys_malloc(size);
+    // 还原
+    pcb->page_dir = old_page_dir;
+    return ret;
+}
+
+void sys_free_in_kernel(void* p) {
+     struct task_struct *pcb = get_current_pcb();
+    const vaddr_t old_page_dir = pcb->page_dir;
+    // 临时修改为null, 使得sys_malloc判断为内核, 后续分配的就是内核空间
+    pcb->page_dir = NULL;
+    sys_free(p);
+    // 还原
+    pcb->page_dir = old_page_dir;
+}

@@ -257,11 +257,9 @@ bool is_kernel_thread(struct task_struct* pcb){
     return NULL == pcb->page_dir;
 }
 
-
 bool is_user_thread(struct task_struct* pcb){
     return NULL != pcb->page_dir;
 }
-
 
 void idle_thread_func(void *args){
     while(1){

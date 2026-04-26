@@ -38,7 +38,24 @@ void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_posi
     @brief 写入inode到分区
     @param p_part : struct Partition * : 扇区信息
     @param inode : struct Inode *: inode信息
-    @param io_buff : void *: 主调函数提供的缓冲区，如果要给则至少需要2个扇区大小, 否则内部分配
+    @param io_buff : void *: 主调函数提供的缓冲区，如果要给则至少需要2个扇区大小, 或者给null由函数内部处理
 */
 void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff);
+
+
+/**
+ *  @brief 从内存中已经打开的inode列表里找到有无对应的inode信息
+    @param p_part : struct Partition * : 扇区信息
+    @param inode_no : uint32_t:  inode编号
+    @return struct Inode * 打开的inode信息地址
+*/
+struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no);
+
+/*
+    @brief 打开inode,即加载inode信息到内存
+    @param p_part : struct Partition * : 扇区信息
+    @param inode_no : uint32_t:  inode编号
+    @return struct Inode * 打开的inode信息地址
+*/
+struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no);
 #endif

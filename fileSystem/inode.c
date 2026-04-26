@@ -40,3 +40,49 @@ void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) 
         sys_free(io_buff);
     }
 }
+
+
+/**
+ * @brief 从内存中已经打开的inode列表里找到有无对应的inode信息
+ * 
+ */
+static struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no) {
+    assert(p_part && inode_no < MAX_FILES_PER_PART);
+    struct list_node* iter = p_part->opened_inodes.head.next;
+    while(iter != &(p_part->opened_inodes.tail)){
+        struct Inode *p_opened_inode = elem2entry(struct Inode, inode_tag, iter);
+        if (p_opened_inode->i_no == inode_no) {
+            return p_opened_inode;
+        }
+        iter = iter->next;
+    }
+    return NULL;
+}
+
+struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
+    assert(p_part && inode_no < MAX_FILES_PER_PART);
+    // 优先从内存里有的找， 找的到就直接返回
+    struct Inode* p_inode = find_opened_inode(p_part, inode_no);
+    if (p_inode) {
+        // 找到的话打开数+1
+        p_inode->i_open_cnts++;
+        return p_inode;
+    }
+    // 找不到就从磁盘打开
+    void *io_buff = sys_malloc(2 * SECTOR_SIZE_BYTE);
+    // inode给内核关联，分配的空间只能是内存中的
+    p_inode = sys_malloc_in_kernel(sizeof(struct Inode));
+    struct Inode_position inode_pos;
+    inode_locate(p_part, inode_no, &inode_pos);
+    ide_read(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
+    struct Inode *p_inode_in_disk = (struct Inode *)io_buff + p_inode->i_no;
+    memcpy(p_inode, p_inode_in_disk, sizeof (struct Inode));
+    // 部分信息是运行中才有用, 刚读取出来的时候进行一下初始化
+    list_init(&p_inode->inode_tag);
+    p_inode->i_open_cnts = 1;
+    p_inode->write_deny = false;
+    // 加入到列表头
+    list_push_front(&p_part->opened_inodes, &p_inode->inode_tag);
+    sys_free(io_buff);
+    return p_inode;
+}
