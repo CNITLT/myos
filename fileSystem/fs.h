@@ -8,11 +8,11 @@
 #define BITS_PER_SECTOR (SECTOR_SIZE_BYTE*8)  
 #define BLOCK_SIZE SECTOR_SIZE_BYTE
 
-enum File_types {
+typedef enum File_types {
     FT_UNKNOWN = 0, // 未知
     FT_REGULLAR, // 普通文件
     FT_DIRECTORY, // 目录
-};
+} File_types;
 
 /*
 @brief 为分区格式化文件系统

@@ -3,6 +3,7 @@
 #include "inode.h"
 #include "fs.h"
 #include "ide.h"
+
 #define DIR_CACHE_SIZE 512
 #define MAX_FILE_NAME_LENGTH 16 
 
@@ -17,7 +18,7 @@ struct Dir {
 struct Dir_entry {
     char fileName[MAX_FILE_NAME_LENGTH]; // 文件名
     uint32_t i_no; // inode节点编号
-    enum File_types f_type;
+    File_types f_type;
 };
 
 /*
@@ -27,10 +28,10 @@ struct Dir_entry {
 void open_root_dir(struct Partition* p_part);
 
 /*
-    @brief 打开分区上节点为inode_no的目录并返回目录指针，需要释放
+    @brief 打开分区上节点为inode_no的目录并返回目录指针，由dir_close释放
     @param p_part: struct Partition *: 分区信息
     @param inode_no : uint32_t: inode编号
-    @return struct Dir *: 目录信息，动态分配的内存空间，需要释放
+    @return struct Dir *: 目录信息，动态分配的内存空间，由dir_close释放
 */
 struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no);
 
@@ -54,4 +55,18 @@ void get_dir_all_block_lba(struct Partition* p_part, struct Dir *p_dir, uint32_t
 */
 bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry);
 
+/*
+    @brief 关闭目录, 对根目录会忽略该操作
+    @param p_dir: struct Dir *: 目录信息
+*/
+void dir_close(struct Dir * p_dir);
+
+
+/*
+    @brief 给定信息初始化指定的目录条目
+    @param fileName: char *: 目录项目名
+    @param inode_no : uint32_t : inode编号
+    @param f_type: File_types : 条目类型
+*/
+void create_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type);
 #endif

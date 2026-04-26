@@ -65,7 +65,7 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
         ide_read(p_part->p_disk, p_all_block_lba[i], buff, 1);
         struct Dir_entry*p_dir_entry_iter = buff;
         for (int j = 0; j < SECTOR_SIZE_BYTE / sizeof(struct Dir_entry); j++) {
-            if (!strcmp(p_dir_entry_iter->fileName, entry_name)) {
+            if (!strcmp(p_dir_entry_iter->fileName, entry_name) && p_dir_entry_iter->f_type != FT_UNKNOWN) {
                 // 找到了就直接返回
                 memcpy(p_dir_entry, p_dir_entry_iter, sizeof(struct Dir_entry));
                 sys_free(buff);
@@ -79,4 +79,20 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
     sys_free(buff);
     sys_free(p_all_block_lba);
     return false;
+}
+
+
+void dir_close(struct Dir * p_dir) {
+    if (p_dir == &g_root_dir) {
+        return;
+    }
+    inode_close(&p_dir->inode);
+    sys_free(p_dir);
+}
+
+void create_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type) {
+    assert(strlen(fileName) <= MAX_FILE_NAME_LENGTH);
+    memcpy(p_dir_entry->fileName, fileName, strlen(fileName));
+    p_dir_entry->i_no = inode_no;
+    p_dir_entry->f_type = f_type;
 }
