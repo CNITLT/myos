@@ -45,3 +45,22 @@ int32_t block_bitmap_alloc(struct Partition *p_part) {
     bitmap_set(&p_part->block_bitmap, bit_index, BIT_STATE_USE);
     return p_part->super_block->data_area_lba_base + bit_index;
 }
+
+void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap_type) {
+    // 相对于位图所在磁盘内的位图起点扇区的偏移
+    uint32_t offset_sector = bit_index / BITS_PER_SECTOR;
+    // 先对于内存位图的字节偏移
+    uint32_t offset_byte = offset_sector * BLOCK_SIZE;
+    uint32_t sector_lba;
+    // bitmap内对应的一小块扇区的起点地址
+    uint8_t *sector_bits;
+
+    if (bitmap_type == Bitmap_type_inode) {
+        sector_lba = p_part->super_block->inode_bitmap_lba + offset_sector;
+        sector_bits = p_part->inode_bitmap.bits + offset_byte;
+    } else if (bitmap_type == Bitmap_type_block) {
+        sector_lba = p_part->super_block->block_bitmap_lba + offset_sector;
+        sector_bits = p_part->block_bitmap.bits + offset_byte;
+    }
+    ide_write(p_part->p_disk, sector_lba, sector_bits, 1);
+}

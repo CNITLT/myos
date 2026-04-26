@@ -22,10 +22,10 @@ enum Std_fd {
     stderr_no = 2
 };
 
-enum Bitmap_type {
+typedef enum Bitmap_type {
     Bitmap_type_inode, // inode位图
     Bitmap_type_block // 块位图
-};
+} Bitmap_type;
 
 /*
     @brief 从全局的文件描述符数组里获取一个空闲位, 失败返回-1
@@ -53,4 +53,13 @@ int32_t inode_bitmap_alloc(struct Partition *p_part);
     @return uint32_t 扇区地址，失败返回-1
 */
 int32_t block_bitmap_alloc(struct Partition *p_part);
+
+/*
+    @brief 将bit_index对应的那部分bitmap信息同步到磁盘
+    @param p_part: struct Partition * : 分区信息
+    @param bit_index: int32_t : 改动的数据位置索引
+    @param bitmap_type : Bitmap_type : 位图类型
+*/
+void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap_type);
+
 #endif
