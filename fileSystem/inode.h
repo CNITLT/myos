@@ -64,4 +64,12 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no);
     @param p_inode : struct Inode * : inode信息
 */
 void inode_close(struct Inode* p_inode);
+
+
+/*
+    @brief 初始化inode
+    @param p_inode : struct Inode * : inode信息
+    @param inode_no : uint32_t : inode编号
+*/
+void inode_init(struct Inode* p_inode, uint32_t inode_no);
 #endif

@@ -82,7 +82,6 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
     struct Inode *p_inode_in_disk = (struct Inode *)io_buff + p_inode->i_no;
     memcpy(p_inode, p_inode_in_disk, sizeof (struct Inode));
     // 部分信息是运行中才有用, 刚读取出来的时候进行一下初始化
-    list_init(&p_inode->inode_tag);
     p_inode->i_open_cnts = 1;
     p_inode->write_deny = false;
 
@@ -112,4 +111,15 @@ void inode_close(struct Inode* p_inode) {
         sys_free_in_kernel(p_inode);
     }
     set_interrupt_state(old_intr_state);
+}
+
+void inode_init(struct Inode* p_inode, uint32_t inode_no) {
+    p_inode->i_no = inode_no;
+    p_inode->i_size = 0;
+    p_inode->i_open_cnts = 0;
+    p_inode->write_deny = false;
+
+    for(int i = 0; i < I_NODE_SECTOR_SIZE; i++) {
+        p_inode->i_sectors[i] = 0;
+    }
 }
