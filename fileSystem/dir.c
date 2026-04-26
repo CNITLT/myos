@@ -17,8 +17,8 @@ struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
     return p_dir;
 }
 
-bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
-    assert(BLOCK_SIZE % sizeof(uint32_t) == 0);
+void get_dir_all_block_lba(struct Partition* p_part, struct Dir *p_dir, uint32_t **p_all_block_lba_ret, uint32_t *p_all_block_lba_count_ret) {
+ assert(BLOCK_SIZE % sizeof(uint32_t) == 0);
     // 对p_all_block_lba 的初始化感觉效率有点低，但无所谓了
     uint32_t all_block_count = I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE * BLOCK_SIZE / sizeof(uint32_t);
     uint32_t *p_all_block_lba = (uint32_t  *)sys_malloc(all_block_count * sizeof(uint32_t));
@@ -45,6 +45,17 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
             }
         }
     }
+    *p_all_block_lba_ret = p_all_block_lba;
+    *p_all_block_lba_count_ret = all_block_count;
+    sys_free(buff);
+}
+
+
+bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
+    uint32_t all_block_count;
+    uint32_t *p_all_block_lba;
+    get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
     // 保证项一定是在一个扇区里面，写目录的时候保证扇区末尾最后一定空间不足够赛下的时候就新开一个存
     for (int i = 0; i < all_block_count; i++) {
         // 因为从中间删除的话，中间是有可能有空洞的

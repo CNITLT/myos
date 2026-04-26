@@ -34,6 +34,16 @@ void open_root_dir(struct Partition* p_part);
 */
 struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no);
 
+
+/*
+    @brief 获取目录下在磁盘所有block的lba地址汇总
+    @param p_part: struct Partition *: 分区信息
+    @param p_dir:  struct Dir * :搜寻的目录
+    @param p_all_block_lba_ret: uint32_t **: 返回值，存储函数分配的所有block lba地址的数组地址的指针地址, 使用完后由外部释放
+    @param p_all_block_lba_count_ret: uint32_t *: 返回值，all_block_lba数组元素个数
+*/
+void get_dir_all_block_lba(struct Partition* p_part, struct Dir *p_dir, uint32_t **p_all_block_lba_ret, uint32_t *p_all_block_lba_count_ret);
+
 /*
     @brief 查找目录下的是否存在名为${entry_name}的目录项，如有则存入p_dir_entry指向的地址内
     @param p_part: struct Partition *: 分区信息
@@ -43,4 +53,5 @@ struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no);
     @return bool 成功则返回true 否则false
 */
 bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry);
+
 #endif
