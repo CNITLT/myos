@@ -62,12 +62,16 @@ static struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_
 struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
     assert(p_part && inode_no < MAX_FILES_PER_PART);
     // 优先从内存里有的找， 找的到就直接返回
+    interrupt_state old_intr_state = close_interrupt();
     struct Inode* p_inode = find_opened_inode(p_part, inode_no);
     if (p_inode) {
         // 找到的话打开数+1
         p_inode->i_open_cnts++;
+        set_interrupt_state(old_intr_state);
         return p_inode;
     }
+    set_interrupt_state(old_intr_state);
+
     // 找不到就从磁盘打开
     void *io_buff = sys_malloc(2 * SECTOR_SIZE_BYTE);
     // inode给内核关联，分配的空间只能是内存中的
@@ -81,8 +85,31 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
     list_init(&p_inode->inode_tag);
     p_inode->i_open_cnts = 1;
     p_inode->write_deny = false;
+
     // 加入到列表头
+    // 先再额外找一次，如果还没有才能加
+    old_intr_state = close_interrupt();
+    struct Inode* p_ext_find_inode = find_opened_inode(p_part, inode_no);
+    if (p_ext_find_inode) {
+        // 找到的话打开数+1
+        p_ext_find_inode->i_open_cnts++;
+        set_interrupt_state(old_intr_state);
+        return p_ext_find_inode;
+    }
     list_push_front(&p_part->opened_inodes, &p_inode->inode_tag);
+    set_interrupt_state(old_intr_state);
+
     sys_free(io_buff);
     return p_inode;
+}
+
+void inode_close(struct Inode* p_inode) {
+    interrupt_state old_intr_state = close_interrupt();
+    p_inode->i_open_cnts--;
+    if (p_inode->i_open_cnts == 0) {
+        // 最后一个关闭的从列表中移除
+        list_remove(&p_inode->inode_tag);
+        sys_free_in_kernel(p_inode);
+    }
+    set_interrupt_state(old_intr_state);
 }

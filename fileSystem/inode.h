@@ -58,4 +58,10 @@ struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no);
     @return struct Inode * 打开的inode信息地址
 */
 struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no);
+
+/*
+    @brief 关闭inode
+    @param p_inode : struct Inode * : inode信息
+*/
+void inode_close(struct Inode* p_inode);
 #endif
