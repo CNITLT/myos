@@ -244,3 +244,64 @@ int32_t path_depth(char *path) {
     }
     return depth;
 }
+
+int search_file(const char *path, struct Path_search_record *p_searched_record) {
+    assert(p_searched_record != NULL);
+    memset(p_searched_record, 0, sizeof(struct Path_search_record));
+    if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
+        // 根目录及不存在的根目录的父目录的情况
+        p_searched_record->p_parent_dir = &g_root_dir;
+        p_searched_record->file_type = FT_DIRECTORY;
+        p_searched_record->searched_path[0] = 0;
+        return g_root_dir.p_inode->i_no;
+    }
+
+    int32_t path_len = strlen(path);
+    assert(path_len < MAX_PATH_LENGTH && path_len > 1 && path[0] == '/');
+    char *sub_path = (char *)path;
+    struct Dir *p_parent_dir = &g_root_dir;
+    struct Dir_entry dir_entry;
+
+    char name[MAX_FILE_NAME_LENGTH] = {0};
+
+    p_searched_record->p_parent_dir = p_parent_dir;
+    p_searched_record->file_type = FT_UNKNOWN;
+    int32_t parent_inode_no = p_parent_dir->p_inode->i_no;
+
+    sub_path = path_parse(sub_path, name);
+    while(name[0]) {
+        assert(strlen(p_searched_record->searched_path) < MAX_PATH_LENGTH);
+        strcat(p_searched_record->searched_path, "/");
+        strcat(p_searched_record->searched_path, name); 
+        if (search_dir_entry(g_current_part, p_parent_dir, name, &dir_entry)) {
+            memset(name, 0, MAX_FILE_NAME_LENGTH);
+            if (sub_path) {
+                sub_path = path_parse(sub_path, name);
+            }
+
+            if (dir_entry.f_type == FT_DIRECTORY) {
+                // 是目录继续查
+                parent_inode_no = p_parent_dir->p_inode->i_no;
+                dir_close(p_parent_dir);
+                p_parent_dir = dir_open(g_current_part, dir_entry.i_no);
+                p_searched_record->p_parent_dir = p_parent_dir;
+                continue;
+            } else if (dir_entry.f_type == FT_REGULLAR) {
+                // 文件的话就返回,都是文件了，如果中间路径是文件，后面没法找，如果这里是最后路径，那么不需要找，无论如果是文件的话就可以返回了
+                p_searched_record->file_type = FT_REGULLAR;
+                return dir_entry.i_no;
+            }
+        } else {
+            // 没有找到
+            return -1;
+        }
+    }
+    
+    // 执行到这里说明是经过了完整的路径, 且只能是目录类型,文件会在中途返回
+    // 此时这里是最后一个打开的也就是自己，需要关掉
+    dir_close(p_searched_record->p_parent_dir);
+    // 这里打开记录的父目录，重新修正下指向
+    p_searched_record->p_parent_dir = dir_open(g_current_part, parent_inode_no);
+    p_searched_record->file_type = FT_DIRECTORY;
+    return dir_entry.i_no;
+}

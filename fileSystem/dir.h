@@ -7,12 +7,13 @@
 #define DIR_CACHE_SIZE 512
 #define MAX_FILE_NAME_LENGTH 16 
 
-
 struct Dir {
     struct Inode* p_inode;
     uint32_t dir_pos; // 目录内遍历偏移，运行时使用
     Byte dir_buff[DIR_CACHE_SIZE]; // 目录缓存
 };
+
+extern struct Dir g_root_dir;
 
 // 单个扇区最后一些位置存不下一个项目的话就新开一个扇区存, 操作起来方便一些
 struct Dir_entry {

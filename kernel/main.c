@@ -79,8 +79,8 @@ void init_thread(void *args){
     thread_start("thread1",1,thread1,NULL);
     //thread_start("thread2",1,thread2,NULL);
     init_idle_thread();
-    //process_execute(process1,"p1");
-    //process_execute(process2,"p2");
+    process_execute(process1,"p1");
+    process_execute(process2,"p2");
     open_interrupt();
     sync_printf("init_thread:%x interupt_state:%d\n", init_thread, get_interrupt_state()); 
     uint32_t count = 0;
