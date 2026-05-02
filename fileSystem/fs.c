@@ -210,3 +210,37 @@ void load_default_partition() {
     struct Partition *p_part = elem2entry(struct Partition, part_tag, iter); 
     load_partition(p_part->name);
 }
+
+char *path_parse(char *path, char *top_name_buff) {
+    if (path[0] == '/') {
+        while(*(++path) == '/');
+    }
+
+    while(*path != '/' && *path != 0) {
+        *top_name_buff++ = *path++;
+    }
+
+    if (path[0] == 0) {
+        return NULL;
+    }
+    return path;
+}
+
+int32_t path_depth(char *path) {
+    if (path == NULL) {
+        return 0;
+    }
+    char *p = path;
+    char name[MAX_FILE_NAME_LENGTH];
+    memset(name, 0, MAX_FILE_NAME_LENGTH);
+    int32_t depth = 0;
+    p = path_parse(p, name);
+    while(name[0]) {
+        depth++;
+        memset(name, 0, MAX_FILE_NAME_LENGTH);
+        if (p) {
+            p = path_parse(p, name);
+        }
+    }
+    return depth;
+}

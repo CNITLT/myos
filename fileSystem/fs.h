@@ -34,4 +34,19 @@ void load_partition(char *part_name);
 @brief 加载默认的分区，即第一个
 */
 void load_default_partition();
+
+/*
+ * @brief 解析路径，例给出/a/b/c 这top_name_buff存的是a, 返回的是/b/c
+ * @param path: char *: 路径 /a/b/c这类
+ * @param top_name: char *: 给定一个存储空间，返回顶层目录名
+ * @return char *: 后序子路径, 如果没有，则为NULL
+*/
+char *path_parse(char *path, char *top_name_buff);
+
+/*
+ * @brief 计算路径深度，例给出/a/b/c 则返回3
+ * @param path: char *: 路径 /a/b/c这类
+ * @return int32_t 路径深度
+*/
+int32_t path_depth(char *path);
 #endif              
