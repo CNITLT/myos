@@ -1,6 +1,7 @@
 #include "file.h"
 #include "thread.h"
 #include "bitmap.h"
+#include "debug.h"
 static struct File g_file_table[MAX_FD_SIZE];
 
 /*
@@ -35,7 +36,6 @@ int32_t inode_bitmap_alloc(struct Partition *p_part) {
     return bit_index;
 }
 
-
 int32_t block_bitmap_alloc(struct Partition *p_part) {
     int32_t bit_index = bitmap_find_range(&p_part->block_bitmap, 1);
     if (bit_index == BITMAP_RANGE_NOTFOUND) {
@@ -44,6 +44,12 @@ int32_t block_bitmap_alloc(struct Partition *p_part) {
     // 此处返回的是扇区地址
     bitmap_set(&p_part->block_bitmap, bit_index, BIT_STATE_USE);
     return p_part->super_block->data_area_lba_base + bit_index;
+}
+
+void block_bitmap_free(struct Partition *p_part, int32_t block_lba) {
+    int32_t bit_index = block_lba - p_part->super_block->data_area_lba_base;
+    assert(bit_index != -1);
+    bitmap_set(&p_part->block_bitmap, bit_index, BIT_STATE_UNUSE);
 }
 
 void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap_type) {

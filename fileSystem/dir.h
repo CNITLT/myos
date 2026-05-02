@@ -9,7 +9,7 @@
 
 
 struct Dir {
-    struct Inode* inode;
+    struct Inode* p_inode;
     uint32_t dir_pos; // 目录内遍历偏移，运行时使用
     Byte dir_buff[DIR_CACHE_SIZE]; // 目录缓存
 };
@@ -69,4 +69,14 @@ void dir_close(struct Dir * p_dir);
     @param f_type: File_types : 条目类型
 */
 void create_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type);
+
+/*
+    @brief 将目录项写入目录, 保证项一定是在一个扇区里面，写目录的时候保证扇区末尾最后一定空间不足够赛下的时候就新开一个存
+    @param p_part: struct Partition *: 分区信息
+    @param p_dir: struct Dir *: 目录信息
+    @param p_dir_entry: struct Dir_entry* :  目录项信息
+    @param io_buff : void *: 主调函数提供的IO缓冲区，至少需要一个扇区大小, 可为null, 此时为内部自行分配
+    @return 写入结果,成功true,失败false
+*/ 
+bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff);
 #endif

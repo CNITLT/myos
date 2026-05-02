@@ -50,9 +50,16 @@ int32_t inode_bitmap_alloc(struct Partition *p_part);
 /*
     @brief 从位图内分配block节点，返回节点对应的扇区地址
     @param p_part: struct Partition *: 分区信息
-    @return uint32_t 扇区地址，失败返回-1
+    @return int32_t 扇区地址，失败返回-1
 */
 int32_t block_bitmap_alloc(struct Partition *p_part);
+
+/*
+    @brief 从位图内释放block节点
+    @param p_part: struct Partition *: 分区信息
+   	@param block_lba : int32_t : 扇区地址 
+*/
+void block_bitmap_free(struct Partition *p_part, int32_t block_lba);
 
 /*
     @brief 将bit_index对应的那部分bitmap信息同步到磁盘

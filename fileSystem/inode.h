@@ -10,7 +10,8 @@
 // 直接块数量
 #define I_NODE_LAYER0_BLCOK_SIZE 12
 #define I_NODE_LAYER1_BLOCK_SIZE 1
-
+// 一级块内的直接块数量
+#define I_NODE_LAYER0_SIZE_PER_LAYER1 (BLOCK_SIZE / sizeof(uint32_t))
 struct Inode
 {
     uint32_t i_no; // inode编号
