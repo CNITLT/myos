@@ -313,6 +313,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
         printf("file_create sys_malloc buff fail");
         return -1;
     }
+
     // 用于指定回滚步骤
     int32_t rollbakc_step = 0; 
     // 先分配一个inode号
@@ -360,16 +361,24 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
         // 写入文件的inode
         memset(buff, 0, 2*BLOCK_SIZE);
         inode_sync(g_current_part, p_inode, buff);
-        
         // 同步bitmap
         bitmap_sync(g_current_part, inode_no, Bitmap_type_inode);
 
-        // 追加到打开的inode链表
-        list_push_front(&g_current_part->opened_inodes, &p_inode->inode_tag);
-        p_inode->i_open_cnts = 1;
-        
+
+        // 最后在进程内打开失败的话，则认为文件是创建成功的，但打开失败了
+        int pcb_fd_index = pcb_fd_install(fd_index);
+        if (pcb_fd_index != -1) {
+            // 成功，追加到打开的inode链表
+            list_push_front(&g_current_part->opened_inodes, &p_inode->inode_tag);
+            p_inode->i_open_cnts = 1;
+        } else {
+            // 失败释放对应资源，但对于磁盘则不回滚
+            g_file_table[fd_index].p_fd_inode = NULL;
+            sys_free(p_inode);
+        }
+
         sys_free(buff);
-        return pcb_fd_install(fd_index);
+        return pcb_fd_index;
     } while(0);
 
 

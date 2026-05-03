@@ -71,10 +71,12 @@ int search_file(const char *path, struct Path_search_record *p_searched_record);
 
 
 /*
- * @brief 创建文件，成功返回文件描述符(进程级), 否则-1
+ * @brief 创建文件，成功返回文件描述符(进程级), 否则-1, 
  * @param p_dir : struct Dir *: 待创建文件所在的目录
-* @param filename: char *: 文件名，有长度限制
+ * @param filename: char *: 文件名，有长度限制
  * @param flag : uint8_t : 文件权限 
+ * @return 成功则返回进程内的文件描述符，否则-1
+ * @note 内部没有先搜索是否同名文件已经存在, 需要外部判断
 */
 int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag);
 #endif              
