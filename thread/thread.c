@@ -278,7 +278,12 @@ void main_thread_func(void *args){
     init_other_in_main_thread();
     // 其他测试逻辑
     int fd = sys_open("/a.txt", O_CREAT);
+    if (fd == -1) {
+        fd = sys_open("/a.txt", O_RDWR);
+    }
     printf("sys_open /a.txt fd:%d\n",fd);
+    char * textStr = "hello sys_write\n";
+    sys_write(fd, textStr, strlen(textStr));
     while(1){}
 }
 

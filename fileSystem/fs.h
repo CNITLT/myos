@@ -93,6 +93,15 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag);
 int32_t sys_open(const char *path, uint8_t flags);
 
 /*
+ * @brief 写入数据到特定的文件描述符
+ * @param fd: int32_t :待写入的文件描述符索引
+ * @param data: void *: 待写入的数据 
+ * @param count: size_t :写入的数据量
+ * @return 成功返回写入的数据量，失败返回-1
+*/
+int32_t sys_write(int32_t fd, const void *data, size_t count);
+
+/*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
  * @return 成功返回全局的文件描述符

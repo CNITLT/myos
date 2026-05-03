@@ -489,6 +489,7 @@ int32_t sys_open(const char *path, uint8_t flags) {
 
     dir_close(p_path_search_record->p_parent_dir);
     sys_free(p_path_search_record);
+    return fd;
 }
 
 
@@ -508,4 +509,30 @@ int32_t sys_close(int32_t local_fd_index) {
         pcb->fd_table[local_fd_index] = -1;
     }
     return ret;
+}
+
+int32_t sys_write(int32_t fd, const void *data, size_t count) {
+    if (fd < 0) {
+        printf("sys_write fd error, less than 0\n");
+        return -1;
+    }
+    
+    if (fd == stdout_no) {
+        char *str = sys_malloc(count + 1);
+        str[count] = 0;
+        memcpy(str, data, count);
+        put_str(str);
+        return count;
+    }
+
+    uint32_t global_fd_index = fd_local2global(fd);
+    struct File* p_file = &g_file_table[global_fd_index];
+    if (p_file->fd_flag & O_WR_ONLY || p_file->fd_flag & O_RDWR) {
+        // 具有写权限
+        uint32_t write_count = file_write(p_file, data, count);
+        return write_count;
+    } else {
+        printf("sys_write not allow to write\n");
+        return -1;
+    }
 }
