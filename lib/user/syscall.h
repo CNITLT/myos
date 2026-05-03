@@ -9,6 +9,7 @@ enum SYSCALL_NR {
     SYS_MALLOC,
     SYS_FREE,
     SYS_WRITE,
+    SYS_READ,
  };
 /*
 @brief 用户态的系统调用入口
@@ -50,4 +51,13 @@ void free(void* p);
 */
 int32_t write(int32_t fd, const void *data, size_t count);
 
+
+/*
+ * @brief 读取文件描述符的数据
+ * @param fd: int32_t :待读取的文件描述符索引
+ * @param data: void *: 待读取的数据的缓冲区
+ * @param count: size_t :读取的数据量
+ * @return 成功返回读取的数据量，失败返回-1
+*/
+int32_t read(int32_t fd, const void *data, size_t count);
 #endif

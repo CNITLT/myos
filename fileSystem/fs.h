@@ -101,6 +101,15 @@ int32_t sys_open(const char *path, uint8_t flags);
 */
 int32_t sys_write(int32_t fd, const void *data, size_t count);
 
+
+/*
+ * @brief 读取文件描述符的数据
+ * @param fd: int32_t :待读取的文件描述符索引
+ * @param data: void *: 待读取的数据的缓冲区
+ * @param count: size_t :读取的数据量
+ * @return 成功返回读取的数据量，失败返回-1
+*/
+int32_t sys_read(int32_t fd, void *data, size_t count);
 /*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符

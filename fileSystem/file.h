@@ -102,4 +102,13 @@ int32_t file_close(struct File *p_file);
  * @return 成功返回写入的数据量，失败返回-1
 */
 int32_t file_write(struct File *p_file, void *data, size_t count);
+
+/*
+ * @brief 从当前文件游标开始读取数据
+ * @param p_file: struct File * :待读取的文件描述符
+ * @param data: void *: 待读取的数据缓冲区
+ * @param count: size_t :读取的数据量
+ * @return 成功返回读取的数据量，失败返回-1
+*/
+int32_t file_read(struct File *p_file, void *data, size_t count);
 #endif

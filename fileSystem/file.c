@@ -182,3 +182,62 @@ int32_t file_write(struct File *p_file, void *data, size_t count) {
     sys_free(buff);
     return write_count;
 }
+
+
+int32_t file_read(struct File *p_file, void *data, size_t count) {
+    assert(p_file && data && count);
+    // 修正下，如果剩下的可读取的数据量少，以少的为准
+    count = MIN(count, (p_file->p_fd_inode->i_size - p_file->fd_pos));
+    printf("debug file_read i_size:%d fd_pos:%d count:%d\n",p_file->p_fd_inode->i_size, p_file->fd_pos, count);
+    if (count == 0) {
+        // 没有东西可以读了，返回-1
+        printf("file_read no data could read \n");
+        return -1;
+    }
+
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("file_read malloc buff faild\n");
+        return -1;
+    }
+
+    int32_t read_count = 0;
+    uint32_t *p_all_block_lba = NULL;
+    uint32_t all_block_lba_count = 0;
+    get_inode_all_block_lba(g_current_part, p_file->p_fd_inode, &p_all_block_lba, &all_block_lba_count);
+    // 未读取数据的指针
+    Byte *next = (Byte *)data;
+    // 还剩下多少未读取
+    size_t next_count = count;
+    while(next_count) {
+         // 操作的相关偏移
+        int32_t all_block_write_index = p_file->fd_pos / BLOCK_SIZE;
+        int32_t index_in_sector = p_file->fd_pos % BLOCK_SIZE;
+        // 当前可读的剩余容量
+        int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
+        // 本次实际读取的大小
+        int32_t read_size_in_once = MIN(free_size_in_sector, next_count);
+       
+        // 是读取，基本上是一定会有的，而不是走内部的分配
+        int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
+        printf("debug file_read all_block_write_index:%d index_in_sector:%d free_size_in_sector:%d read_size_in_once:%d block_lba:0x%x\n", all_block_write_index,index_in_sector, free_size_in_sector, read_size_in_once,block_lba);
+        if (block_lba == -1) {
+            printf("file_read alloc_inode_all_block faild\n");
+            return read_count;
+        }
+
+        ide_read(g_current_part->p_disk, block_lba, buff, 1);
+        // printf("debug file_read buff:%s",buff);
+        memcpy(next, buff + index_in_sector, read_size_in_once);
+     
+        // 更新下数据
+        p_file->fd_pos += read_size_in_once;
+        next += read_size_in_once;
+        next_count -= read_size_in_once;
+        read_count += read_size_in_once;
+    }
+
+    sys_free(p_all_block_lba);
+    sys_free(buff);
+    return read_count;
+}

@@ -548,3 +548,13 @@ int32_t sys_write(int32_t fd, const void *data, size_t count) {
         return -1;
     }
 }
+
+int32_t sys_read(int32_t fd, void *data, size_t count) {
+    if (fd < 0) {
+        printf("sys_read read faild for fd less than 0 \n");
+        return -1;
+    }
+    uint32_t global_fd_index = fd_local2global(fd);
+    struct File* p_file = &g_file_table[global_fd_index];
+    return file_read(p_file, data, count);
+}

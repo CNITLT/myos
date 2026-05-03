@@ -31,3 +31,7 @@ void free(void* p){
 int32_t write(int32_t fd, const void *data, size_t count) {
     return syscall(SYS_WRITE, fd, data, count);
 }
+
+int32_t read(int32_t fd, const void *data, size_t count) {
+    return syscall(SYS_READ, fd, data, count);
+}

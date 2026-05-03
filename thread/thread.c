@@ -284,12 +284,23 @@ void main_thread_func(void *args){
         fd = sys_open(fileName, O_RDWR);
     }
     printf("sys_open %s fd:%d\n",fileName, fd);
-    char * textStr = "hello sys_write\n";
-    // TYZ TODO:初步判断，写入之后才有问题
-    write(fd, textStr, strlen(textStr));
 
-    textStr =  "second call sys_write\n";
+
+    //char * textStr = "hello sys_write\n";
+    //write(fd, textStr, strlen(textStr));
+
+    //textStr =  "second call sys_write\n";
     //sys_write(fd, textStr, strlen(textStr));
+    char *buff = malloc(BLOCK_SIZE);
+    
+    memset(buff, 0, BLOCK_SIZE);
+    int read_count = read(fd, buff, BLOCK_SIZE);
+    while(-1 != read_count) {
+        printf("read count:%d content:%s\n",read_count, buff);
+        memset(buff, 0, BLOCK_SIZE);
+        read_count = read(fd, buff, BLOCK_SIZE);
+    }
+
     while(1){}
 }
 

@@ -20,8 +20,8 @@ void syscall_init(){
     syscall_table[SYS_MALLOC] = sys_malloc;
     syscall_table[SYS_FREE] = sys_free;
     syscall_table[SYS_WRITE] = sys_write;
+    syscall_table[SYS_READ] = sys_read;
 }
-
 
 pid_t sys_getpid(void){
     return get_current_pcb()->pid;
