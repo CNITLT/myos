@@ -135,6 +135,8 @@ void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, ui
     // 对p_all_block_lba 的初始化感觉效率有点低，但无所谓了
     uint32_t all_block_count = I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE * BLOCK_SIZE / sizeof(uint32_t);
     uint32_t *p_all_block_lba = (uint32_t  *)sys_malloc(all_block_count * sizeof(uint32_t));
+    // 这里直接假定一定成功，不想考虑太多了
+    assert(p_all_block_lba);
     uint32_t *p_block_iter = p_all_block_lba;
     for (int i = 0; i < I_NODE_LAYER0_BLCOK_SIZE; i++) {
         *p_block_iter = p_inode->i_sectors[i];
