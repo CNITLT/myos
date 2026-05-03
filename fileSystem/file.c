@@ -2,7 +2,7 @@
 #include "thread.h"
 #include "bitmap.h"
 #include "debug.h"
-static struct File g_file_table[MAX_FD_SIZE];
+struct File g_file_table[MAX_FD_SIZE];
 
 /*
     @brief 从全局的文件描述符数组里获取一个空闲位, 失败返回-1
@@ -34,6 +34,10 @@ int32_t inode_bitmap_alloc(struct Partition *p_part) {
         bitmap_set(&p_part->inode_bitmap, bit_index, BIT_STATE_USE);
     }
     return bit_index;
+}
+
+void inode_bitmap_free(struct Partition *p_part, int32_t inode_no) {
+    bitmap_set(&p_part->inode_bitmap, inode_no, BIT_STATE_UNUSE);
 }
 
 int32_t block_bitmap_alloc(struct Partition *p_part) {

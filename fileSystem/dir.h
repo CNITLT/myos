@@ -69,7 +69,7 @@ void dir_close(struct Dir * p_dir);
     @param inode_no : uint32_t : inode编号
     @param f_type: File_types : 条目类型
 */
-void create_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type);
+void init_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type);
 
 /*
     @brief 将目录项写入目录, 保证项一定是在一个扇区里面，写目录的时候保证扇区末尾最后一定空间不足够赛下的时候就新开一个存

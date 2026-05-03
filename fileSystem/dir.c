@@ -92,7 +92,7 @@ void dir_close(struct Dir * p_dir) {
     sys_free(p_dir);
 }
 
-void create_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type) {
+void init_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type) {
     assert(strlen(fileName) <= MAX_FILE_NAME_LENGTH);
     memcpy(p_dir_entry->fileName, fileName, strlen(fileName));
     p_dir_entry->i_no = inode_no;

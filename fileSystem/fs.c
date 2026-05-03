@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "string.h"
 #include "debug.h"
+#include "file.h"
 
 // 默认情况下的操作分区
 struct Partition *g_current_part; 
@@ -304,4 +305,89 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
     p_searched_record->p_parent_dir = dir_open(g_current_part, parent_inode_no);
     p_searched_record->file_type = FT_DIRECTORY;
     return dir_entry.i_no;
+}
+
+int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
+    void *buff = sys_malloc(2 * BLOCK_SIZE);
+    if (!buff) {
+        printf("file_create sys_malloc buff fail");
+        return -1;
+    }
+    // 用于指定回滚步骤
+    int32_t rollbakc_step = 0; 
+    // 先分配一个inode号
+    int32_t inode_no = inode_bitmap_alloc(g_current_part);
+    if (inode_no == -1) {
+        printf("file_create inode_bitmap_alloc fail");
+        return -1;
+    }
+
+    int fd_index = -1;
+    struct Inode *p_inode = NULL;
+    do {
+        p_inode = (struct Inode *)sys_malloc(sizeof(struct Inode));
+        if (!p_inode) {
+            printf("file_create sys_malloc inode fail");
+            rollbakc_step = 1;
+            break;
+        }
+        inode_init(p_inode, inode_no);
+        
+        // 获取有无空闲的操槽位
+        fd_index = get_free_file_slot_in_g_table();
+        if (fd_index == -1) {
+            printf("file_create get_free_file_slot_in_g_table fail");
+            rollbakc_step = 2;
+            break;
+        }
+
+        g_file_table[fd_index].p_fd_inode = p_inode;
+        g_file_table[fd_index].fd_pos = 0;
+        g_file_table[fd_index].fd_flag = flag;
+        g_file_table[fd_index].p_fd_inode->write_deny = false;
+
+        struct Dir_entry dir_entry;
+        memset(&dir_entry, 0 ,sizeof(struct Dir_entry));
+        init_dir_entry(&dir_entry, filename, inode_no, FT_REGULLAR);
+
+        if (!sync_dir_entry(g_current_part, p_dir, &dir_entry, buff)) {
+            printf("file_create sync_dir_entry fail");
+            rollbakc_step = 3;
+            break;
+        }
+
+        // 这里与书上不一样，sync_dir_entry改过了，写入成功会自动写入inode, 所以此处没有写目录inode的步骤
+        // 写入文件的inode
+        memset(buff, 0, 2*BLOCK_SIZE);
+        inode_sync(g_current_part, p_inode, buff);
+        
+        // 同步bitmap
+        bitmap_sync(g_current_part, inode_no, Bitmap_type_inode);
+
+        // 追加到打开的inode链表
+        list_push_front(&g_current_part->opened_inodes, &p_inode->inode_tag);
+        p_inode->i_open_cnts = 1;
+        
+        sys_free(buff);
+        return pcb_fd_install(fd_index);
+    } while(0);
+
+
+
+    // 这里基本不用break，回滚步骤就是如此
+    switch (rollbakc_step)
+    {
+    case 3:
+        memset(g_file_table + fd_index, 0 , sizeof(struct File));
+    case 2:
+        sys_free(p_inode);
+    case 1:
+        // inode空间分配失败，回滚inode_bit_map
+        inode_bitmap_free(g_current_part, inode_no);
+    default:
+        break;
+    }
+
+    sys_free(buff);
+    return -1;
 }

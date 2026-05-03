@@ -23,7 +23,7 @@ typedef enum oflags {
 
 struct Path_search_record {
     char searched_path[MAX_PATH_LENGTH]; // 查找过程中的父路径，主要是在断链没找到的情况下有用
-    struct dir* p_parent_dir; //文件或目录所在的直接父目录
+    struct dir* p_parent_dir; //文件或目录所在的直接父目录, 由调用函数记得释放, 被掉函数打开
     File_types file_type; // 找到的文件类型, 找不到为FT_UNKNOWN
 };
 /*
@@ -68,4 +68,13 @@ int32_t path_depth(char *path);
  * @param p_searched_record: struct Path_search_record *: 搜索信息详情
 */
 int search_file(const char *path, struct Path_search_record *p_searched_record);
+
+
+/*
+ * @brief 创建文件，成功返回文件描述符(进程级), 否则-1
+ * @param p_dir : struct Dir *: 待创建文件所在的目录
+* @param filename: char *: 文件名，有长度限制
+ * @param flag : uint8_t : 文件权限 
+*/
+int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag);
 #endif              

@@ -15,6 +15,8 @@ struct File
     struct Inode *p_fd_inode; // 文件对应的inode节点
 };
 
+extern struct File g_file_table[MAX_FD_SIZE];
+
 // 标准输入输出描述符
 enum Std_fd {
     stdin_no = 0,
@@ -46,6 +48,12 @@ int32_t pcb_fd_install(int32_t globa_fd_index);
 */
 int32_t inode_bitmap_alloc(struct Partition *p_part);
 
+/*
+    @brief 从位图内释放inode节点
+    @param p_part: struct Partition *: 分区信息
+    @param inode_no : int32_t : inode编号
+*/
+void inode_bitmap_free(struct Partition *p_part, int32_t inode_no);
 
 /*
     @brief 从位图内分配block节点，返回节点对应的扇区地址
