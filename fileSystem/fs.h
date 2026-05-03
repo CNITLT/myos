@@ -92,4 +92,10 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag);
 */
 int32_t sys_open(const char *path, uint8_t flags);
 
+/*
+ * @brief 当前进程文件描述符转化为全局文件描述符
+ * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
+ * @return 成功返回全局的文件描述符
+*/
+int32_t fd_local2global(uint32_t local_fd_index);
 #endif              

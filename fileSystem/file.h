@@ -77,4 +77,20 @@ void block_bitmap_free(struct Partition *p_part, int32_t block_lba);
 */
 void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap_type);
 
+
+/*
+ * @brief 打开文件，成功返回文件描述符，否则-1
+ * @param inode_no : uint32_t : inode编号
+ * @param flags: uint8_t: 对应的操作权限
+ * @return int32_t 进程级文件描述符
+ * @note 只能打开文件
+*/
+int32_t file_open(uint32_t inode_no, uint8_t flag);
+
+/*
+ * @brief 关闭文件
+ * @param p_file: struct File * :待关闭的文件描述符
+ * @return int32_t 成功返回0，失败-1，基本上只能是0
+*/
+int32_t file_close(struct File *p_file);
 #endif

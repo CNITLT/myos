@@ -74,3 +74,49 @@ void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap
     }
     ide_write(p_part->p_disk, sector_lba, sector_bits, 1);
 }
+
+int32_t file_open(uint32_t inode_no, uint8_t flag) {
+    int32_t fd_index = get_free_file_slot_in_g_table();
+    if (fd_index == -1) {
+        printf("file_open get_free_file_slot_in_g_table faild\n");
+        return -1;
+    }
+
+    g_file_table[fd_index].p_fd_inode = inode_open(g_current_part, inode_no);
+    g_file_table[fd_index].fd_pos = 0;
+    g_file_table[fd_index].fd_flag = flag;
+
+    int pcb_fd_index = pcb_fd_install(fd_index);
+    if (pcb_fd_index == -1) {
+        inode_close(g_file_table[fd_index].p_fd_inode);
+        g_file_table[fd_index].p_fd_inode = NULL;
+        printf("file_open pcb_fd_install faild\n");
+        return -1;
+    }
+
+    bool *write_deny = &(g_file_table[fd_index].p_fd_inode->write_deny);
+
+    if (flag & O_WR_ONLY || (flag & O_RDWR)) {
+        interrupt_state old_intr_state = close_interrupt();
+        // 这里设计上是只能有一个进程以写模式打开
+        if (!(*write_deny)) {
+            *write_deny = true;
+            set_interrupt_state(old_intr_state);
+        } else {
+            set_interrupt_state(old_intr_state);
+            printf("file_open write_deny set true faild\n");
+            return -1;
+        }
+    }
+    return pcb_fd_index;
+}
+
+int32_t file_close(struct File *p_file) {
+    if (!p_file) {
+        return -1;
+    }
+    p_file->p_fd_inode->write_deny = false;
+    inode_close(p_file->p_fd_inode);
+    p_file->p_fd_inode = NULL;
+    return 0;
+}

@@ -7,7 +7,7 @@
 #include "string.h"
 #include "debug.h"
 #include "file.h"
-
+#include "thread.h"
 // 默认情况下的操作分区
 struct Partition *g_current_part; 
 
@@ -481,9 +481,31 @@ int32_t sys_open(const char *path, uint8_t flags) {
 	switch (flags & O_CREAT) {
         case O_CREAT:
             fd = file_create(p_path_search_record->p_parent_dir, strrchr(path, '/') + 1, flags);
-        // TYZ TODO:这里后续补充其他情况，目前先仅创建打开
+            break;
+        default:
+            fd = file_open(inode_no, flags);
+            break;
     }
 
     dir_close(p_path_search_record->p_parent_dir);
     sys_free(p_path_search_record);
+}
+
+
+int32_t fd_local2global(uint32_t local_fd_index) {
+    assert(local_fd_index >= USED_FD_START_INDEX);
+    struct task_struct *pcb = get_current_pcb();
+    int32_t global_fd_index = pcb->fd_table[local_fd_index];
+    return global_fd_index;
+}
+
+int32_t sys_close(int32_t local_fd_index) {
+    int ret = -1;
+    if (local_fd_index >= USED_FD_START_INDEX) {
+        int32_t global_fd_index = fd_local2global(local_fd_index);
+        ret = file_close(&g_file_table[global_fd_index]);
+        struct task_struct *pcb = get_current_pcb();
+        pcb->fd_table[local_fd_index] = -1;
+    }
+    return ret;
 }
