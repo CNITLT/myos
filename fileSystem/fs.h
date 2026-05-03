@@ -8,6 +8,9 @@
 #define BITS_PER_SECTOR (SECTOR_SIZE_BYTE*8)  
 #define BLOCK_SIZE SECTOR_SIZE_BYTE
 
+
+extern struct Partition *g_current_part; 
+
 typedef enum File_types {
     FT_UNKNOWN = 0, // 未知
     FT_REGULLAR, // 普通文件
@@ -23,7 +26,7 @@ typedef enum oflags {
 
 struct Path_search_record {
     char searched_path[MAX_PATH_LENGTH]; // 查找过程中的父路径，主要是在断链没找到的情况下有用
-    struct dir* p_parent_dir; //文件或目录所在的直接父目录, 由调用函数记得释放, 被掉函数打开
+    struct Dir* p_parent_dir; //文件或目录所在的直接父目录, 由调用函数记得释放, 被掉函数打开
     File_types file_type; // 找到的文件类型, 找不到为FT_UNKNOWN
 };
 /*
@@ -57,10 +60,10 @@ char *path_parse(char *path, char *top_name_buff);
 
 /*
  * @brief 计算路径深度，例给出/a/b/c 则返回3
- * @param path: char *: 路径 /a/b/c这类
+ * @param path:const char *: 路径 /a/b/c这类
  * @return int32_t 路径深度
 */
-int32_t path_depth(char *path);
+int32_t path_depth(const char *path);
 
 /*
  * @brief 搜索path对应的文件或目录，找到最终文件，最终目录或者中途断链（/a/b/c b是个文件）则返回最后搜索的inode, 若中间搜索过程存在没找到的情况则返回-1
@@ -79,4 +82,14 @@ int search_file(const char *path, struct Path_search_record *p_searched_record);
  * @note 内部没有先搜索是否同名文件已经存在, 需要外部判断
 */
 int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag);
+
+/*
+ * @brief 打开或创建文件，成功返回文件描述符，否则-1
+ * @param path: const char *: 文件绝对路径
+ * @param flags: uint8_t: 对应的操作权限
+ * @return int32_t 进程级文件描述符
+ * @note 只能打开文件
+*/
+int32_t sys_open(const char *path, uint8_t flags);
+
 #endif              

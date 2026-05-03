@@ -142,6 +142,7 @@ void fileSystem_init() {
     uint32_t dev_no = 0;
     uint32_t part_index = 0;
 
+    // 为没文件系统的分区格式化文件系统，除了操作系统在的分区
     struct Super_block *p_super_block = (struct  Super_block *)sys_malloc(SECTOR_SIZE_BYTE);
     assert(p_super_block);
    
@@ -164,14 +165,22 @@ void fileSystem_init() {
     }
     
     sys_free(p_super_block);
+
+    // 初始化文件列表
+    for(int i = 0; i < MAX_FD_SIZE; i++) {
+        g_file_table[i].p_fd_inode = NULL;
+    }
+
 }
 
 
 void load_partition(char *part_name) {
+    // printf("debug enter load_partition\n");
     struct list_node* iter = g_partition_list.head.next;
     struct list_node* res = NULL;
     while(iter != &(g_partition_list.tail)){
-        struct Partition *p_part = elem2entry(struct Partition, part_tag, iter);
+        struct Partition * p_part = elem2entry(struct Partition, part_tag, iter);
+        printf("debug load_partition iter name:%s target:%s cmp:%d\n", p_part->name, part_name, strcmp(part_name, p_part->name));
         if (!strcmp(part_name, p_part->name)) {
             // 相等
             // 没有super_block说明之前没加载过，这里加载一下
@@ -195,14 +204,23 @@ void load_partition(char *part_name) {
                 p_part->inode_bitmap.len_bit = inode_bit_map_size * 8;
                 // 链表初始化，其实这里算是重复初始化的，之前有过一次,保险点多一次也无所谓
                 list_init(&p_part->opened_inodes);
-                printf("load part:%s size sector:%d", p_part->name, p_part->size_sector);
-                return;
+                g_current_part = p_part;
+                break;
             } else {
                 // 加载过的直接改变指针就行
-                g_current_part = p_part;
+                 g_current_part = p_part;
+                break;
             }
         }
         iter = iter->next;
+    }
+    if (!g_current_part) {
+        printf("load part:%s failed\n", part_name);
+        assert(g_current_part);
+    } else {
+        printf("load part:%s size sector:%d\n", g_current_part->name, g_current_part->size_sector);
+        printf("load part:%s block bit map bits:0x%x len_bit:%d\n", g_current_part->name,  g_current_part->block_bitmap.bits,  g_current_part->block_bitmap.len_bit); 
+        printf("load part:%s block bit map bits:0x%x len_bit:%d\n", g_current_part->name,  g_current_part->inode_bitmap.bits,  g_current_part->inode_bitmap.len_bit);  
     }
 }
 
@@ -227,11 +245,11 @@ char *path_parse(char *path, char *top_name_buff) {
     return path;
 }
 
-int32_t path_depth(char *path) {
+int32_t path_depth(const char *path) {
     if (path == NULL) {
         return 0;
     }
-    char *p = path;
+    char *p = (char *)path;
     char name[MAX_FILE_NAME_LENGTH];
     memset(name, 0, MAX_FILE_NAME_LENGTH);
     int32_t depth = 0;
@@ -250,6 +268,7 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
     assert(p_searched_record != NULL);
     memset(p_searched_record, 0, sizeof(struct Path_search_record));
     if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
+        printf("search_file search target:%s is root dir\n",path);
         // 根目录及不存在的根目录的父目录的情况
         p_searched_record->p_parent_dir = &g_root_dir;
         p_searched_record->file_type = FT_DIRECTORY;
@@ -271,6 +290,7 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
 
     sub_path = path_parse(sub_path, name);
     while(name[0]) {
+        printf("debug search file sub_path:%s name:%s p_parent_dir:0x%x p_parent_dir->p_inode:0x%x  g_root_dir.p_inode:0x%x\n", sub_path, name, p_parent_dir, p_parent_dir->p_inode, g_root_dir.p_inode);
         assert(strlen(p_searched_record->searched_path) < MAX_PATH_LENGTH);
         strcat(p_searched_record->searched_path, "/");
         strcat(p_searched_record->searched_path, name); 
@@ -317,6 +337,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
     // 用于指定回滚步骤
     int32_t rollbakc_step = 0; 
     // 先分配一个inode号
+    // printf("debug g_current_part inode bitmap bitlen:%d\n", g_current_part->inode_bitmap.len_bit);
     int32_t inode_no = inode_bitmap_alloc(g_current_part);
     if (inode_no == -1) {
         printf("file_create inode_bitmap_alloc fail");
@@ -350,7 +371,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
         struct Dir_entry dir_entry;
         memset(&dir_entry, 0 ,sizeof(struct Dir_entry));
         init_dir_entry(&dir_entry, filename, inode_no, FT_REGULLAR);
-
+        // printf("debug file_create sync_dir_entry\n ");
         if (!sync_dir_entry(g_current_part, p_dir, &dir_entry, buff)) {
             printf("file_create sync_dir_entry fail");
             rollbakc_step = 3;
@@ -399,4 +420,70 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
 
     sys_free(buff);
     return -1;
+}
+
+
+int32_t sys_open(const char *path, uint8_t flags) {
+    assert(path);
+    assert(flags < 8);
+    // 末尾是/ 说明是目录，这个函数不支持，直接返回
+    if (path[strlen(path) - 1] == '/') {
+        printf("sys_open path is dir, open faild");
+        return -1;
+    }
+    int32_t fd = -1;
+    // 偏大的变量尽量别放栈里，容易爆栈
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    if (!p_path_search_record) {
+        printf("sys_open malloc Path_search_record faild\n");
+        return -1;
+    }
+    memset(p_path_search_record, 0 , sizeof(struct Path_search_record));
+    int32_t origin_path_depth = path_depth(path);
+    printf("debug sys_open will entry search file\n");
+    int inode_no = search_file(path, p_path_search_record);
+    bool found = inode_no != -1;
+    if (p_path_search_record->file_type == FT_DIRECTORY) {
+        // 最终结果是目录或者在中途查找断链，中间结果是目录, 此类情况直接结束
+        printf("sys_open p_path_search_record is dir, faild\n");
+        dir_close(p_path_search_record->p_parent_dir);
+        sys_free(p_path_search_record);
+        return -1;
+    }
+
+    int32_t searched_path_depth = path_depth(p_path_search_record->searched_path);
+    if (searched_path_depth != origin_path_depth) {
+        // 深度不一样，说明中间是断了
+        printf("sys_open %s is not exist\n", path);
+        dir_close(p_path_search_record->p_parent_dir);
+        sys_free(p_path_search_record);
+        return -1; 
+    }
+
+    // 深度一样，在最后一个情况下可能出现的问题
+    // 没有找到, 且没有指定创建, 返回-1
+    if (!found && !(flags & O_CREAT)) {
+        printf("sys_open %s is not exist and not create flag\n", path);
+        dir_close(p_path_search_record->p_parent_dir);
+        sys_free(p_path_search_record);
+        return -1; 
+    }  
+    // 找到了，但是要创建，也认为是失败
+    if (found && (flags & O_CREAT)) {
+        printf("sys_open %s is exist but set create flag\n", path);
+        dir_close(p_path_search_record->p_parent_dir);
+        sys_free(p_path_search_record);
+        return -1;  
+    }
+
+    // printf("debug sys_open enter file_create\n");
+    // printf("debug sys_open p_dir->inode:%x\n", p_path_search_record->p_parent_dir->p_inode);
+	switch (flags & O_CREAT) {
+        case O_CREAT:
+            fd = file_create(p_path_search_record->p_parent_dir, strrchr(path, '/') + 1, flags);
+        // TYZ TODO:这里后续补充其他情况，目前先仅创建打开
+    }
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
 }

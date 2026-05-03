@@ -43,6 +43,8 @@ void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) 
 
 struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no) {
     assert(p_part && inode_no < MAX_FILES_PER_PART);
+    // printf("debug find_opened_inode start\n");
+    // while(1){};
     struct list_node* iter = p_part->opened_inodes.head.next;
     while(iter != &(p_part->opened_inodes.tail)){
         struct Inode *p_opened_inode = elem2entry(struct Inode, inode_tag, iter);
@@ -51,30 +53,37 @@ struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no) {
         }
         iter = iter->next;
     }
+    // printf("debug find_opened_inode end\n");
+    // while(1){};
     return NULL;
 }
 
 struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
     assert(p_part && inode_no < MAX_FILES_PER_PART);
     // 优先从内存里有的找， 找的到就直接返回
+    // printf("debug inode_open start\n");
     interrupt_state old_intr_state = close_interrupt();
     struct Inode* p_inode = find_opened_inode(p_part, inode_no);
     if (p_inode) {
         // 找到的话打开数+1
         p_inode->i_open_cnts++;
         set_interrupt_state(old_intr_state);
+        printf("debug inode_open opened exit\n");
         return p_inode;
     }
     set_interrupt_state(old_intr_state);
-
+    // printf("debug inode_open opened not exit will find in disk\n");
+    // while (1);
+    
     // 找不到就从磁盘打开
     void *io_buff = sys_malloc(2 * SECTOR_SIZE_BYTE);
     // inode给内核关联，分配的空间只能是内存中的
     p_inode = sys_malloc_in_kernel(sizeof(struct Inode));
+
     struct Inode_position inode_pos;
     inode_locate(p_part, inode_no, &inode_pos);
     ide_read(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
-    struct Inode *p_inode_in_disk = (struct Inode *)io_buff + p_inode->i_no;
+    struct Inode *p_inode_in_disk = (struct Inode *)((Byte *)io_buff + inode_pos.offset_in_section);
     memcpy(p_inode, p_inode_in_disk, sizeof (struct Inode));
     // 部分信息是运行中才有用, 刚读取出来的时候进行一下初始化
     p_inode->i_open_cnts = 1;

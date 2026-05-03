@@ -7,6 +7,7 @@
 #include "io.h"
 #include "process.h"
 #include "list.h"
+#include "fs.h"
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
 struct task_struct* idle_thread_pcb; //idle空闲进程
@@ -275,6 +276,9 @@ void main_thread_func(void *args){
     init_idle_thread();
     open_interrupt();
     init_other_in_main_thread();
+    // 其他测试逻辑
+    int fd = sys_open("/a.txt", O_CREAT);
+    printf("sys_open /a.txt fd:%d\n",fd);
     while(1){}
 }
 

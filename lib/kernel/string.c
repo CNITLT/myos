@@ -66,7 +66,11 @@ char* strcpy(char* dst,const char * src){
 }
 
 int strcmp(const char *a,const char *b){
-    return memcmp(a, b, strlen(a) > strlen(b)?strlen(b)+1:strlen(a)+1);
+    int res = memcmp(a, b, strlen(a) > strlen(b)?strlen(b)+1:strlen(a)+1);
+    if (res == 0 && (strlen(a) != strlen(b))) {
+        return strlen(a) > strlen(b) ? 1 : -1;
+    }
+    return res;
 }
 
 char * strchr(const char* str, char ch){

@@ -8,8 +8,11 @@
 struct Dir g_root_dir;
 
 void open_root_dir(struct Partition* p_part) {
+    // printf("debug open_root_dir p_part:%x name:%s root_inode_no:%d", p_part, p_part->name,  p_part->super_block->root_inode_no);
+    // while(1){};
     g_root_dir.p_inode = inode_open(p_part, p_part->super_block->root_inode_no);
     g_root_dir.dir_pos = 0;
+    printf("debug open_root_dir p_part:%x name:%s root_inode_no:%d g_root_dir.inode:0x%x\n", p_part, p_part->name,  p_part->super_block->root_inode_no, g_root_dir.p_inode); 
 }
 
 struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
@@ -165,6 +168,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
             ide_write(p_part->p_disk, p_all_block_lba[i], buff, 1);
             p_dir->p_inode->i_size += dir_entry_size;
             // 同步inode信息
+            //printf("debug sync_dir_entry if inode_sync part:%x inode:%x", p_part, p_dir->p_inode);
             inode_sync(p_part, p_dir->p_inode, NULL);
             return true;
         } else {
@@ -177,6 +181,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
                     ide_write(p_part->p_disk, p_all_block_lba[i], buff, 1);
                     p_dir->p_inode->i_size += dir_entry_size;
                     // 同步inode信息
+                    //printf("debug sync_dir_entry else  inode_sync part:%x inode:%x", p_part, p_dir->p_inode);
                     inode_sync(p_part, p_dir->p_inode, NULL);
                     return true;
                 }
