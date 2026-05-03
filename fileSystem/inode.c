@@ -197,6 +197,14 @@ static int32_t alloc_inode_sector_block(struct Partition* p_part, struct Inode *
     p_inode->i_sectors[i_sector_index] = block_lba;
     // 同步inode
     inode_sync(p_part, p_inode, NULL);
+    // 重置下磁盘的内容
+    Byte *buff = sys_malloc(BLOCK_SIZE);
+    if (buff) {
+        memset(buff, 0, BLOCK_SIZE);
+        ide_write(p_part->p_disk, block_lba, buff, 1);
+        sys_free(buff);
+    }
+    
     return block_lba;
 }
 
@@ -253,6 +261,10 @@ static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *
 
         // 写入inode
         inode_sync(p_part, p_inode, NULL);
+        
+        // 刚分配的直接块内容清0
+        memset(buff, 0, BLOCK_SIZE);
+        ide_write(p_part->p_disk, block_lba, buff, 1);
     }
 
     sys_free(buff);

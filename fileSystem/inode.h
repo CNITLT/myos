@@ -93,4 +93,8 @@ void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, ui
    @return int32_t: 成果返回新分配的直接块地址, 否则为-1
 */
 int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
+
+
+
+
 #endif
