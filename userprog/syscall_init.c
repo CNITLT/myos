@@ -2,6 +2,7 @@
 #include "print.h"
 #include "syscall.h"
 #include "memory.h"
+#include "fs.h"
 syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
 /*
 默认系统调用中断，还是只打印一句话
@@ -18,6 +19,7 @@ void syscall_init(){
     syscall_table[SYS_GETPID] = sys_getpid;
     syscall_table[SYS_MALLOC] = sys_malloc;
     syscall_table[SYS_FREE] = sys_free;
+    syscall_table[SYS_WRITE] = sys_write;
 }
 
 

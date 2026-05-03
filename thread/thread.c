@@ -286,7 +286,7 @@ void main_thread_func(void *args){
     printf("sys_open %s fd:%d\n",fileName, fd);
     char * textStr = "hello sys_write\n";
     // TYZ TODO:初步判断，写入之后才有问题
-    sys_write(fd, textStr, strlen(textStr));
+    write(fd, textStr, strlen(textStr));
 
     textStr =  "second call sys_write\n";
     //sys_write(fd, textStr, strlen(textStr));

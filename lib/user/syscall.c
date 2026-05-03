@@ -27,3 +27,7 @@ void* malloc(size_t size){
 void free(void* p){
     syscall(SYS_FREE, p);
 }
+
+int32_t write(int32_t fd, const void *data, size_t count) {
+    return syscall(SYS_WRITE, fd, data, count);
+}
