@@ -23,38 +23,8 @@ struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
 }
 
 void get_dir_all_block_lba(struct Partition* p_part, struct Dir *p_dir, uint32_t **p_all_block_lba_ret, uint32_t *p_all_block_lba_count_ret) {
- assert(BLOCK_SIZE % sizeof(uint32_t) == 0);
-    // 对p_all_block_lba 的初始化感觉效率有点低，但无所谓了
-    uint32_t all_block_count = I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE * BLOCK_SIZE / sizeof(uint32_t);
-    uint32_t *p_all_block_lba = (uint32_t  *)sys_malloc(all_block_count * sizeof(uint32_t));
-    uint32_t *p_block_iter = p_all_block_lba;
-    for (int i = 0; i < I_NODE_LAYER0_BLCOK_SIZE; i++) {
-        *p_block_iter = p_dir->p_inode->i_sectors[i];
-        p_block_iter++;
-    }
-    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
-    for (int i = I_NODE_LAYER0_BLCOK_SIZE; i < I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE; i++) {
-        int j = I_NODE_LAYER0_SIZE_PER_LAYER1;
-        if (p_dir->p_inode->i_sectors[i] == 0)  {
-            while(j--) {
-                *p_block_iter = 0;
-                p_block_iter++;
-            }
-        } else {
-            ide_read(p_part->p_disk, p_dir->p_inode->i_sectors[i], buff, 1);
-            uint32_t *p_block_iter_src = buff;
-            while(j--) {
-                *p_block_iter = *p_block_iter_src;
-                p_block_iter++;
-                p_block_iter_src++;
-            }
-        }
-    }
-    *p_all_block_lba_ret = p_all_block_lba;
-    *p_all_block_lba_count_ret = all_block_count;
-    sys_free(buff);
+    get_inode_all_block_lba(p_part, p_dir->p_inode, p_all_block_lba_ret, p_all_block_lba_count_ret);
 }
-
 
 bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
     uint32_t all_block_count;
@@ -123,6 +93,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
             int32_t block_lba = block_bitmap_alloc(p_part);
             if (block_lba == -1) {
                 printf("sync_dir_entry block_lba false");
+                sys_free(p_all_block_lba);
                 return false;
             }
             // 然后同步磁盘
@@ -143,6 +114,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
                     // 此时撤回之前的修改与同步
                     block_bitmap_free(p_part, block_lba);
                     bitmap_sync(p_part, block_bitmap_index, Bitmap_type_block);
+                    sys_free(p_all_block_lba);
                     return false;
                 }
                 // 分配成功再同步一次磁盘
@@ -170,6 +142,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
             // 同步inode信息
             //printf("debug sync_dir_entry if inode_sync part:%x inode:%x", p_part, p_dir->p_inode);
             inode_sync(p_part, p_dir->p_inode, NULL);
+            sys_free(p_all_block_lba);
             return true;
         } else {
             // 块已经存在，遍历找空位
@@ -183,6 +156,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
                     // 同步inode信息
                     //printf("debug sync_dir_entry else  inode_sync part:%x inode:%x", p_part, p_dir->p_inode);
                     inode_sync(p_part, p_dir->p_inode, NULL);
+                    sys_free(p_all_block_lba);
                     return true;
                 }
                 p_dir_entry_iter++;

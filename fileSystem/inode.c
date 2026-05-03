@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "string.h"
+#include "file.h"
 
 void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_position *p_inode_pos) {
     assert(inode_no < MAX_FILES_PER_PART);
@@ -127,3 +128,145 @@ void inode_init(struct Inode* p_inode, uint32_t inode_no) {
         p_inode->i_sectors[i] = 0;
     }
 }
+
+
+void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, uint32_t **p_all_block_lba_ret, uint32_t *p_all_block_lba_count_ret) {
+    assert(BLOCK_SIZE % sizeof(uint32_t) == 0);
+    // 对p_all_block_lba 的初始化感觉效率有点低，但无所谓了
+    uint32_t all_block_count = I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE * BLOCK_SIZE / sizeof(uint32_t);
+    uint32_t *p_all_block_lba = (uint32_t  *)sys_malloc(all_block_count * sizeof(uint32_t));
+    uint32_t *p_block_iter = p_all_block_lba;
+    for (int i = 0; i < I_NODE_LAYER0_BLCOK_SIZE; i++) {
+        *p_block_iter = p_inode->i_sectors[i];
+        p_block_iter++;
+    }
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    for (int i = I_NODE_LAYER0_BLCOK_SIZE; i < I_NODE_LAYER0_BLCOK_SIZE + I_NODE_LAYER1_BLOCK_SIZE; i++) {
+        int j = I_NODE_LAYER0_SIZE_PER_LAYER1;
+        if (p_inode->i_sectors[i] == 0)  {
+            while(j--) {
+                *p_block_iter = 0;
+                p_block_iter++;
+            }
+        } else {
+            ide_read(p_part->p_disk, p_inode->i_sectors[i], buff, 1);
+            uint32_t *p_block_iter_src = buff;
+            while(j--) {
+                *p_block_iter = *p_block_iter_src;
+                p_block_iter++;
+                p_block_iter_src++;
+            }
+        }
+    }
+    *p_all_block_lba_ret = p_all_block_lba;
+    *p_all_block_lba_count_ret = all_block_count;
+    sys_free(buff);
+}
+
+// 在所有直接块索引转化到sector_index索引，主要是用于一级块索引定位
+static int32_t all_block_index2_i_sector_index(int32_t all_block_index) {
+    // 直接块不需要算，直接返回原值
+    if (all_block_index < I_NODE_LAYER0_BLCOK_SIZE) {
+        return all_block_index;
+    } else {
+        return I_NODE_LAYER0_BLCOK_SIZE + (all_block_index - I_NODE_LAYER0_BLCOK_SIZE) / I_NODE_LAYER0_SIZE_PER_LAYER1;
+    }
+}
+
+/*
+  @brief 分配直接块或者1级块，即对i_sector分配块
+  @param p_part: struct Partition* :操作扇区
+  @param p_inode: struct Inode * :inode节点
+  @param i_sector_index: int32_t :待分配的i_sector索引
+  @return 已分配的block_lba地址, 若已经存在则返回已经存在的值
+ */
+static int32_t alloc_inode_sector_block(struct Partition* p_part, struct Inode *p_inode,  int32_t i_sector_index) {
+    assert(i_sector_index < I_NODE_SECTOR_SIZE);
+    if (p_inode->i_sectors[i_sector_index]) {
+        return p_inode->i_sectors[i_sector_index];
+    }
+    int32_t block_lba = block_bitmap_alloc(p_part);
+    if (block_lba == -1) {
+        printf("alloc_inode_layer0_block block_bitmap_alloc false");
+        return -1;
+    }
+    // 然后同步磁盘
+    int32_t block_bitmap_index = block_lba - p_part->super_block->data_area_lba_base;
+    assert(block_bitmap_index != -1);
+    bitmap_sync(p_part, block_bitmap_index, Bitmap_type_block);
+    p_inode->i_sectors[i_sector_index] = block_lba;
+    // 同步inode
+    inode_sync(p_part, p_inode, NULL);
+    return block_lba;
+}
+
+// 分配直接块
+static int32_t alloc_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+    int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+    int32_t block_lba = alloc_inode_sector_block(p_part, p_inode,i_sector_index);
+    if (block_lba == -1) {
+        printf("alloc_inode_layer0_block faild\n");
+        return -1;
+    }
+    p_all_block_lba[all_block_index] = block_lba;
+    return block_lba;
+}
+
+
+// 分配1级块, 若i_sector内的一级块没有分配，也会同时分配
+static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+    int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+    int32_t layer1_block_lba = p_inode->i_sectors[i_sector_index];
+    if (layer1_block_lba == 0) {
+        // 次数先分配i_sector 一级块
+        layer1_block_lba = alloc_inode_sector_block(p_part, p_inode, i_sector_index);
+        if (layer1_block_lba == -1) {
+            printf("alloc_inode_layer1_block  alloc layer1 block faild\n");
+            return -1;
+        }
+    }
+
+    Byte *buff = sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("alloc_inode_layer1_block  sys_malloc buff faild\n");
+        return -1; 
+    }
+    ide_read(p_part->p_disk, layer1_block_lba, buff, 1);
+    int32_t *p_block = ((int32_t *)buff + (all_block_index - I_NODE_LAYER0_BLCOK_SIZE) % I_NODE_LAYER0_SIZE_PER_LAYER1);
+    int32_t block_lba = *p_block;
+    if (block_lba == 0) {
+        // 不存在就分配一个
+        block_lba = block_bitmap_alloc(p_part);
+        if (block_lba == -1) {
+            printf("alloc_inode_layer1_block block_bitmap_alloc block_lba faild\n");
+            sys_free(buff);
+            return false;
+        }
+        // 分配成功，先把bitmap写入
+        int32_t block_bitmap_index = block_lba - p_part->super_block->data_area_lba_base;
+        assert(block_bitmap_index != -1);
+        bitmap_sync(p_part, block_bitmap_index, Bitmap_type_block);
+
+        // 写入一级块
+        *p_block = block_lba;
+        ide_write(p_part->p_disk, layer1_block_lba, buff, 1);
+
+        // 写入inode
+        inode_sync(p_part, p_inode, NULL);
+    }
+
+    sys_free(buff);
+    p_all_block_lba[all_block_index] = block_lba;
+    return block_lba;        
+}
+
+
+int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+     if (i_sector_index < I_NODE_LAYER0_BLCOK_SIZE) {
+        return alloc_inode_layer0_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+     } else {
+        return alloc_inode_layer1_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+     }
+}
+    

@@ -73,4 +73,24 @@ void inode_close(struct Inode* p_inode);
     @param inode_no : uint32_t : inode编号
 */
 void inode_init(struct Inode* p_inode, uint32_t inode_no);
+
+/*
+    @brief 获取inode在磁盘所有block的lba地址汇总
+    @param p_part: struct Partition *: 分区信息
+    @param p_inode:  struct Inode * :搜寻的inode节点
+    @param p_all_block_lba_ret: uint32_t **: 返回值，存储函数分配的所有block lba地址的数组地址的指针地址, 使用完后由外部释放
+    @param p_all_block_lba_count_ret: uint32_t *: 返回值，all_block_lba数组元素个数
+*/
+void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, uint32_t **p_all_block_lba_ret, uint32_t *p_all_block_lba_count_ret);
+
+/*
+   @brief 给一个inode分配一个block, 分配成功会同步到p_all_block_lba内，及inode，磁盘等相关信息
+   @param p_part: struct Partition *: 分区信息
+   @param p_inode:  struct Inode * :搜寻的inode节点
+   @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
+   @param p_all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_index: int32_t : 在所有块内的索引
+   @return int32_t: 成果返回新分配的直接块地址, 否则为-1
+*/
+int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
 #endif

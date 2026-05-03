@@ -8,8 +8,7 @@
 #define MAX_FD_SIZE 256
 // 可用的文件描述符开头, 标准输入 输出 错误输出占了前3个，其他的只能从3开始了
 #define USED_FD_START_INDEX 3
-struct File
-{
+struct File {
     uint32_t fd_pos; // 当前文件操作偏移，从0开始
     uint32_t fd_flag; // 文件操作权限 读写
     struct Inode *p_fd_inode; // 文件对应的inode节点
