@@ -29,8 +29,8 @@ void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) 
     struct Inode_position inode_pos;
     inode_locate(p_part, p_inode->i_no, &inode_pos);
     ide_read(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
-    struct Inode *p_inode_in_disk = (struct Inode *)io_buff + p_inode->i_no;
-    memcpy(p_inode_in_disk, p_inode, sizeof (struct Inode));
+    struct Inode *p_inode_in_disk = (struct Inode *)((Byte *)io_buff + inode_pos.offset_in_section);
+    memcpy(p_inode_in_disk, p_inode, sizeof(struct Inode));
     // 部分信息是运行中才有用的，直接清空
     p_inode_in_disk->inode_tag.prev = NULL;
     p_inode_in_disk->inode_tag.next = NULL;
@@ -69,7 +69,6 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
         // 找到的话打开数+1
         p_inode->i_open_cnts++;
         set_interrupt_state(old_intr_state);
-        printf("debug inode_open opened exit\n");
         return p_inode;
     }
     set_interrupt_state(old_intr_state);
@@ -184,6 +183,7 @@ static int32_t all_block_index2_i_sector_index(int32_t all_block_index) {
  */
 static int32_t alloc_inode_sector_block(struct Partition* p_part, struct Inode *p_inode,  int32_t i_sector_index) {
     assert(i_sector_index < I_NODE_SECTOR_SIZE);
+    // printf("debug alloc_inode_sector_block p_inode_no:%d i_sectors[0]:0x%x\n", p_inode->i_no, p_inode->i_sectors[0]);
     if (p_inode->i_sectors[i_sector_index]) {
         return p_inode->i_sectors[i_sector_index];
     }

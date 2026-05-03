@@ -277,13 +277,19 @@ void main_thread_func(void *args){
     open_interrupt();
     init_other_in_main_thread();
     // 其他测试逻辑
-    int fd = sys_open("/a.txt", O_CREAT);
+    char *fileName = "/d.txt";
+    int fd = sys_open(fileName, O_CREAT | O_RDWR);
+    printf("sys_open first open fd:%d\n", fd);
     if (fd == -1) {
-        fd = sys_open("/a.txt", O_RDWR);
+        fd = sys_open(fileName, O_RDWR);
     }
-    printf("sys_open /a.txt fd:%d\n",fd);
+    printf("sys_open %s fd:%d\n",fileName, fd);
     char * textStr = "hello sys_write\n";
+    // TYZ TODO:初步判断，写入之后才有问题
     sys_write(fd, textStr, strlen(textStr));
+
+    textStr =  "second call sys_write\n";
+    //sys_write(fd, textStr, strlen(textStr));
     while(1){}
 }
 

@@ -12,7 +12,7 @@ void open_root_dir(struct Partition* p_part) {
     // while(1){};
     g_root_dir.p_inode = inode_open(p_part, p_part->super_block->root_inode_no);
     g_root_dir.dir_pos = 0;
-    printf("debug open_root_dir p_part:%x name:%s root_inode_no:%d g_root_dir.inode:0x%x\n", p_part, p_part->name,  p_part->super_block->root_inode_no, g_root_dir.p_inode); 
+    //printf("debug open_root_dir p_part:%x name:%s root_inode_no:%d g_root_dir.inode:0x%x\n", p_part, p_part->name,  p_part->super_block->root_inode_no, g_root_dir.p_inode); 
 }
 
 struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
@@ -37,9 +37,11 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
         if (p_all_block_lba[i] == 0) {
             continue;
         }
+        memset(buff,0,BLOCK_SIZE);
         ide_read(p_part->p_disk, p_all_block_lba[i], buff, 1);
-        struct Dir_entry*p_dir_entry_iter = buff;
-        for (int j = 0; j < SECTOR_SIZE_BYTE / sizeof(struct Dir_entry); j++) {
+        struct Dir_entry*p_dir_entry_iter = (struct Dir_entry*)buff;
+        while((uint32_t)p_dir_entry_iter < (uint32_t)(buff + BLOCK_SIZE)) {
+            // printf("debug search_dir_entry iter:0x%x filename:%s target name:%s cmp:%d iter type:%d\n",p_dir_entry_iter, p_dir_entry_iter->fileName, entry_name, strcmp(p_dir_entry_iter->fileName, entry_name),  p_dir_entry_iter->f_type);
             if (!strcmp(p_dir_entry_iter->fileName, entry_name) && p_dir_entry_iter->f_type != FT_UNKNOWN) {
                 // 找到了就直接返回
                 memcpy(p_dir_entry, p_dir_entry_iter, sizeof(struct Dir_entry));

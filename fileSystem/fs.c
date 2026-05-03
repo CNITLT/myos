@@ -160,6 +160,7 @@ void fileSystem_init() {
             } else {
                 printf("part:%s has fileSystem skip init\n", p_part->name); 
             }
+            // sleep_ms(2000);
         }
         iter = iter->next;
     }
@@ -180,7 +181,7 @@ void load_partition(char *part_name) {
     struct list_node* res = NULL;
     while(iter != &(g_partition_list.tail)){
         struct Partition * p_part = elem2entry(struct Partition, part_tag, iter);
-        printf("debug load_partition iter name:%s target:%s cmp:%d\n", p_part->name, part_name, strcmp(part_name, p_part->name));
+        //printf("debug load_partition iter name:%s target:%s cmp:%d\n", p_part->name, part_name, strcmp(part_name, p_part->name));
         if (!strcmp(part_name, p_part->name)) {
             // 相等
             // 没有super_block说明之前没加载过，这里加载一下
@@ -218,9 +219,17 @@ void load_partition(char *part_name) {
         printf("load part:%s failed\n", part_name);
         assert(g_current_part);
     } else {
-        printf("load part:%s size sector:%d\n", g_current_part->name, g_current_part->size_sector);
-        printf("load part:%s block bit map bits:0x%x len_bit:%d\n", g_current_part->name,  g_current_part->block_bitmap.bits,  g_current_part->block_bitmap.len_bit); 
-        printf("load part:%s block bit map bits:0x%x len_bit:%d\n", g_current_part->name,  g_current_part->inode_bitmap.bits,  g_current_part->inode_bitmap.len_bit);  
+        printf("load part:%s start lba:%d size sector:%d\n", g_current_part->name,g_current_part->start_lba, g_current_part->size_sector);
+        printf("block bit map bits:0x%x len_bit:%d\n", g_current_part->block_bitmap.bits,  g_current_part->block_bitmap.len_bit); 
+        printf("inode bit map bits:0x%x len_bit:%d\n", g_current_part->inode_bitmap.bits,  g_current_part->inode_bitmap.len_bit);  
+        struct Super_block *super_block = g_current_part->super_block;
+        printf("super block size_sector:%d inode_count:%d partition_lba_base:0x%x\n", super_block->size_sector, super_block->inode_count, super_block->partition_lba_base);  
+        printf("super block block_bit_map_lba:0x%x size_sector:%d\n", super_block->block_bitmap_lba, super_block->block_bitmap_size_sector); 
+        printf("super block inode_bit_map_lba:0x%x size_sector:%d\n", super_block->inode_bitmap_lba, super_block->inode_bitmap_size_sector); 
+        printf("super block inode_table_lba:0x%x size_sector:%d\n", super_block->inode_table_lba, super_block->inode_table_size_sector); 
+        printf("super block data_area_lba_base:0x%x root_inode_no:%d\n", super_block->data_area_lba_base,  super_block->root_inode_no);
+
+        //sleep_ms(5000);
     }
 }
 
@@ -290,7 +299,7 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
 
     sub_path = path_parse(sub_path, name);
     while(name[0]) {
-        printf("debug search file sub_path:%s name:%s p_parent_dir:0x%x p_parent_dir->p_inode:0x%x  g_root_dir.p_inode:0x%x\n", sub_path, name, p_parent_dir, p_parent_dir->p_inode, g_root_dir.p_inode);
+        //printf("debug search file sub_path:%s name:%s p_parent_dir:0x%x p_parent_dir->p_inode:0x%x  g_root_dir.p_inode:0x%x\n", sub_path, name, p_parent_dir, p_parent_dir->p_inode, g_root_dir.p_inode);
         assert(strlen(p_searched_record->searched_path) < MAX_PATH_LENGTH);
         strcat(p_searched_record->searched_path, "/");
         strcat(p_searched_record->searched_path, name); 
@@ -440,7 +449,7 @@ int32_t sys_open(const char *path, uint8_t flags) {
     }
     memset(p_path_search_record, 0 , sizeof(struct Path_search_record));
     int32_t origin_path_depth = path_depth(path);
-    printf("debug sys_open will entry search file\n");
+    // printf("debug sys_open will entry search file\n");
     int inode_no = search_file(path, p_path_search_record);
     bool found = inode_no != -1;
     if (p_path_search_record->file_type == FT_DIRECTORY) {
@@ -450,6 +459,7 @@ int32_t sys_open(const char *path, uint8_t flags) {
         sys_free(p_path_search_record);
         return -1;
     }
+    //printf("debug sys_open search inode_no:%d search_path:%s file_type:%d \n", inode_no, p_path_search_record->searched_path, p_path_search_record->file_type);
 
     int32_t searched_path_depth = path_depth(p_path_search_record->searched_path);
     if (searched_path_depth != origin_path_depth) {
@@ -527,6 +537,8 @@ int32_t sys_write(int32_t fd, const void *data, size_t count) {
 
     uint32_t global_fd_index = fd_local2global(fd);
     struct File* p_file = &g_file_table[global_fd_index];
+    //printf("debug sys_write p_file inode_no:%d fd:%d g_fd:%d\n", p_file->p_fd_inode->i_no, fd, global_fd_index);
+
     if (p_file->fd_flag & O_WR_ONLY || p_file->fd_flag & O_RDWR) {
         // 具有写权限
         uint32_t write_count = file_write(p_file, data, count);

@@ -5,7 +5,7 @@
 #include "fs.h"
 #include "inode.h"
 #include "dir.h"
-
+#include "string.h"
 struct File g_file_table[MAX_FD_SIZE];
 
 /*
@@ -91,6 +91,7 @@ int32_t file_open(uint32_t inode_no, uint8_t flag) {
     g_file_table[fd_index].fd_flag = flag;
 
     int pcb_fd_index = pcb_fd_install(fd_index);
+    // printf("debug file_open inode_no:%d global_fd:%d local_fd:%d table_inode_no:%d\n",inode_no, fd_index, pcb_fd_index, g_file_table[fd_index].p_fd_inode->i_no);
     if (pcb_fd_index == -1) {
         inode_close(g_file_table[fd_index].p_fd_inode);
         g_file_table[fd_index].p_fd_inode = NULL;
@@ -155,7 +156,7 @@ int32_t file_write(struct File *p_file, void *data, size_t count) {
         int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
         // 本次实际写入的大小
         int32_t write_size_in_once = MIN(free_size_in_sector, next_count);
-        printf("debug file_write i_size:%d \n", p_file->p_fd_inode->i_size);
+        // printf("debug file_write i_size:%d \n", p_file->p_fd_inode->i_size);
         // 存在的会就是读取，不存在的会先分配然后返回
         int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
         if (block_lba == -1) {

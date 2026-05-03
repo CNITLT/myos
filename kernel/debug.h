@@ -21,4 +21,7 @@ else{ \
 }
 #endif
 
+// 调试用的,随时改变
+#define ROOT_DIR_FIRST_BLOCK_LBA 0x5390
+
 #endif
