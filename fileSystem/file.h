@@ -97,9 +97,9 @@ int32_t file_close(struct File *p_file);
 /*
  * @brief 追加写入数据到文件
  * @param p_file: struct File * :待写入的文件描述符
- * @param buff: void *: 待写入的数据 
+ * @param data: void *: 待写入的数据 
  * @param count: size_t :写入的数据量
  * @return 成功返回写入的数据量，失败返回-1
 */
-int32_t file_write(struct File *p_file, void *buff, size_t count);
+int32_t file_write(struct File *p_file, void *data, size_t count);
 #endif

@@ -125,7 +125,8 @@ int32_t file_close(struct File *p_file) {
     return 0;
 }
 
-int32_t file_write(struct File *p_file, void *buff, size_t count) {
+int32_t file_write(struct File *p_file, void *data, size_t count) {
+    assert(p_file && data && count);
     if (p_file->p_fd_inode->i_size + count > MAX_FILE_CONTENT_SIZE) {
         // 超出写入范围了
         printf("file_write exceed max content size\n");
@@ -142,24 +143,26 @@ int32_t file_write(struct File *p_file, void *buff, size_t count) {
     int32_t write_count = 0; // 写入量
 
     // 未写入数据的指针
-    Byte *next = (Byte *)buff;
+    Byte *next = (Byte *)data;
     // 还剩下多少未写入
     size_t next_count = count;
     
     while(write_count < count) {
-        // 存在的会就是读取，不存在的会先分配然后返回
-        int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
-        if (block_lba == -1) {
-            printf("file_write alloc_inode_all_block faild\n");
-            return write_count;
-        }
-        // 操作的相关偏移
+         // 操作的相关偏移
         int32_t all_block_write_index = p_file->p_fd_inode->i_size / BLOCK_SIZE;
         int32_t index_in_sector = p_file->p_fd_inode->i_size % BLOCK_SIZE;
         // 当前可写的剩余容量
         int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
         // 本次实际写入的大小
         int32_t write_size_in_once = MIN(free_size_in_sector, next_count);
+        
+        // 存在的会就是读取，不存在的会先分配然后返回
+        int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
+        if (block_lba == -1) {
+            printf("file_write alloc_inode_all_block faild\n");
+            return write_count;
+        }
+       
         ide_read(g_current_part->p_disk, block_lba, buff, 1);
         memcpy(((Byte *)buff + index_in_sector), next, write_size_in_once);
         ide_write(g_current_part->p_disk, block_lba, buff, 1);
