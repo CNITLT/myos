@@ -82,4 +82,15 @@ void init_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inod
     @return 写入结果,成功true,失败false
 */ 
 bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff);
+
+/*
+    @brief 从目录内删除某一个目录项, 仅对目录项做删除，不会管目录向对应的inode资源
+    @param p_part: struct Partition *: 分区信息
+    @param p_dir: struct Dir *: 目录信息
+    @param p_dir_entry: struct Dir_entry* : 目录项信息，要求名字和inode_no与磁盘内真实的目录项完全一致
+    @param io_buff : void *: 主调函数提供的IO缓冲区，至少需要一个扇区大小, 可为null, 此时为内部自行分配
+    @return 写入结果,成功true,失败false
+*/ 
+bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff);
+
 #endif

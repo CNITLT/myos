@@ -258,3 +258,52 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
     }
     return write_count > 0;
 }
+
+
+bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff) {
+    assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("search_dir_entry malloc buff faild\n");
+        return -1;
+    }
+    uint32_t all_block_count;
+    uint32_t *p_all_block_lba;
+    get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
+    const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
+    const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
+    
+    int pos = 0; // 当前读取的位置
+    int32_t delete_dir_entry_pos = -1;
+    while(pos < p_dir->p_inode->i_size) {
+        int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, pos, buff, max_used_read_size_in_once);
+        if (read_count == -1 || read_count == 0) {
+            break;
+        }
+        // 开始遍历目录项，查找空洞位置
+        struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
+        while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
+            // 目录空洞先跳过
+           if (p_dir_entry_iter->f_type == FT_UNKNOWN || p_dir_entry_iter->magic != DIR_ENTRY_MAGIC) {
+                continue;
+            }
+            if (!strcmp(p_dir_entry_iter->fileName, p_dir_entry->fileName) && p_dir_entry_iter->i_no == p_dir_entry->i_no) {
+                delete_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff);
+                break;
+            }
+            p_dir_entry_iter++;
+        }
+        pos += read_count;
+    }
+
+    int write_count = -1;
+    if (delete_dir_entry_pos != -1) {
+        // 标记一下视为删除
+        p_dir_entry->f_type == FT_UNKNOWN;
+        write_count = write_data_to_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, delete_dir_entry_pos, p_dir_entry, sizeof(struct Dir_entry));
+    }
+
+    sys_free(buff);
+    sys_free(p_all_block_lba);
+    return write_count > 0;
+}
