@@ -11,7 +11,18 @@
 // 默认情况下的操作分区
 struct Partition *g_current_part; 
 
+void clean_part(struct Partition *part) {
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    memset(buff, 0, BLOCK_SIZE);
+    // 跳过启动分区
+    for(int i = 1; i < part->size_sector; i++) {
+        ide_write(part->p_disk, part->start_lba, buff, 1);
+    }
+    sys_free(buff);
+}
+
 void partition_format(struct Partition *part) {
+    clean_part(part);
     // 目前一个block和sector是等价的
     uint32_t boot_sector_sectors = 1;
     uint32_t super_block_sectors = 1;
@@ -118,7 +129,7 @@ void partition_format(struct Partition *part) {
     root_Inode->i_size = p_super_block->dir_entry_size * 2;// .和..
     root_Inode->i_sectors[0] = p_super_block->data_area_lba_base;
     ide_write(part_disk, p_super_block->inode_table_lba, buff, p_super_block->inode_table_size_sector); 
-    
+
     // 根目录项目写入 .和..
     memset(buff, 0, buf_size);  
     struct Dir_entry *p_now_entry =  (struct Dir_entry *)buff;
