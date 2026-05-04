@@ -211,7 +211,7 @@ static int32_t alloc_inode_sector_block(struct Partition* p_part, struct Inode *
 }
 
 // 分配直接块
-static int32_t alloc_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+static int32_t alloc_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
     int32_t block_lba = alloc_inode_sector_block(p_part, p_inode,i_sector_index);
     if (block_lba == -1) {
@@ -224,7 +224,7 @@ static int32_t alloc_inode_layer0_block(struct Partition* p_part, struct Inode *
 
 
 // 分配1级块, 若i_sector内的一级块没有分配，也会同时分配
-static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
     assert(all_block_index >= I_NODE_LAYER0_BLCOK_SIZE);
     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
     int32_t layer1_block_lba = p_inode->i_sectors[i_sector_index];
@@ -276,12 +276,12 @@ static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *
 }
 
 
-int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
      int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
      if (i_sector_index < I_NODE_LAYER0_BLCOK_SIZE) {
-        return alloc_inode_layer0_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+        return alloc_inode_layer0_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_index);
      } else {
-        return alloc_inode_layer1_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+        return alloc_inode_layer1_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_index);
      }
 }
 
@@ -313,7 +313,7 @@ static int32_t free_inode_sector_block(struct Partition* p_part, struct Inode *p
 
 
 // 释放直接块
-static int32_t free_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+static int32_t free_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
     assert(all_block_index < I_NODE_LAYER0_BLCOK_SIZE);
     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
     int res = free_inode_sector_block(p_part, p_inode, i_sector_index);
@@ -322,7 +322,7 @@ static int32_t free_inode_layer0_block(struct Partition* p_part, struct Inode *p
 }
 
 // 释放1级块, 一级块内没有直接块指向，则释放一级块, 若块本身没有被分配，则认为释放成功
-static int32_t free_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+static int32_t free_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
     assert(all_block_index >= I_NODE_LAYER0_BLCOK_SIZE);
     int32_t block_lba = p_all_block_lba[all_block_index];
     if (block_lba == 0) {
@@ -353,12 +353,136 @@ static int32_t free_inode_layer1_block(struct Partition* p_part, struct Inode *p
     return 0;
 }
 
-
-int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index) {
      int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
      if (i_sector_index < I_NODE_LAYER0_BLCOK_SIZE) {
-        return free_inode_layer0_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+        return free_inode_layer0_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_index);
      } else {
-        return free_inode_layer1_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+        return free_inode_layer1_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_index);
      }
+}
+
+
+int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
+    assert(p_part && p_inode && data && count);
+    if (pos < 0 || pos > p_inode->i_size) {
+        printf("read_data_from_inode pos is invaild\n");
+        return -1;
+    }
+
+    // 修正下，如果剩下的可读取的数据量少，以少的为准
+    count = MIN(count, (p_inode->i_size - pos));
+    
+    if (count == 0) {
+        // 没有东西可以读了，返回-1
+        printf("read_data_from_inode no data could read \n");
+        return -1;
+    }
+
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("read_data_from_inode malloc buff faild\n");
+        return -1;
+    }
+    int32_t read_count = 0;
+    
+    // 未读取数据的指针
+    Byte *next = (Byte *)data;
+    // 还剩下多少未读取
+    size_t next_count = count;
+    while(next_count) {
+         // 操作的相关偏移
+        int32_t all_block_write_index = pos / BLOCK_SIZE;
+        int32_t index_in_sector = pos % BLOCK_SIZE;
+        // 当前可读的剩余容量
+        int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
+        // 本次实际读取的大小
+        int32_t read_size_in_once = MIN(free_size_in_sector, next_count);
+       
+        // 是读取，基本上是一定会有的，而不是走内部的分配
+        int32_t block_lba = alloc_inode_all_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
+        // printf("debug read_data_from_inode all_block_write_index:%d index_in_sector:%d free_size_in_sector:%d read_size_in_once:%d block_lba:0x%x\n", all_block_write_index,index_in_sector, free_size_in_sector, read_size_in_once,block_lba);
+        if (block_lba == -1) {
+            printf("file_read alloc_inode_all_block faild\n");
+            return read_count;
+        }
+
+        ide_read(p_part->p_disk, block_lba, buff, 1);
+        // printf("debug read_data_from_inode buff:%s",buff);
+        memcpy(next, buff + index_in_sector, read_size_in_once);
+     
+        // 更新下数据
+        pos += read_size_in_once;
+        next += read_size_in_once;
+        next_count -= read_size_in_once;
+        read_count += read_size_in_once;
+    }
+
+    sys_free(buff);
+    return read_count;
+}
+
+
+int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
+    assert(p_part && p_inode && data && count);
+
+    if (pos < 0 || pos > p_inode->i_size) {
+        printf("write_data_to_inode pos is invaild\n");
+        return -1;
+    }
+
+    if (p_inode->i_size + count > MAX_FILE_CONTENT_SIZE) {
+        // 超出写入范围了
+        printf("write_data_to_inode exceed max content size\n");
+        return -1;
+    }
+    Byte *buff = sys_malloc(2 * BLOCK_SIZE);
+    if (!buff) {
+        printf("write_data_to_inode malloc buff faild\n");
+        return -1;
+    }
+
+    int32_t write_count = 0; // 写入量
+
+    // 未写入数据的指针
+    Byte *next = (Byte *)data;
+    // 还剩下多少未写入
+    size_t next_count = count;
+    
+    while(write_count < count) {
+         // 操作的相关偏移
+        int32_t all_block_write_index = pos / BLOCK_SIZE;
+        int32_t index_in_sector = pos % BLOCK_SIZE;
+        // 当前可写的剩余容量
+        int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
+        // 本次实际写入的大小
+        int32_t write_size_in_once = MIN(free_size_in_sector, next_count);
+        printf("debug write_data_to_inode i_size:%d \n", p_inode->i_size);
+        // 存在的会就是读取，不存在的会先分配然后返回
+        int32_t block_lba = alloc_inode_all_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
+        if (block_lba == -1) {
+            printf("write_data_to_inode alloc_inode_all_block faild\n");
+            return write_count;
+        }
+        if (index_in_sector != 0 || write_size_in_once < BLOCK_SIZE) {
+            ide_read(p_part->p_disk, block_lba, buff, 1);
+        }
+        memcpy(((Byte *)buff + index_in_sector), next, write_size_in_once);
+        ide_write(p_part->p_disk, block_lba, buff, 1);
+
+        // 更新下数据
+        pos += write_size_in_once;
+        next += write_size_in_once;
+        next_count -= write_size_in_once;
+        write_count += write_size_in_once;
+        // 同步下inode
+        memset(buff, 0, 2 * BLOCK_SIZE);
+        if (pos > p_inode->i_size) {
+            p_inode->i_size = pos;
+            inode_sync(p_part, p_inode, buff);
+        }
+    }
+
+    sys_free(buff);
+    return write_count;
 }

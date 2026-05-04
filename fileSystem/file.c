@@ -163,8 +163,10 @@ int32_t file_write(struct File *p_file, void *data, size_t count) {
             printf("file_write alloc_inode_all_block faild\n");
             return write_count;
         }
-       
-        ide_read(g_current_part->p_disk, block_lba, buff, 1);
+        
+        if (index_in_sector != 0 || write_size_in_once < BLOCK_SIZE) {
+            ide_read(g_current_part->p_disk, block_lba, buff, 1);
+        }
         memcpy(((Byte *)buff + index_in_sector), next, write_size_in_once);
         ide_write(g_current_part->p_disk, block_lba, buff, 1);
 

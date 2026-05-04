@@ -16,7 +16,7 @@
 struct Inode
 {
     uint32_t i_no; // inode编号
-    uint32_t i_size; // 文件大小
+    uint32_t i_size; // 文件大小 （书上版本代表 有些目录项*目录项大小， 魔改后对目录来说仅代表(历史最大值) * 目录项大小，也就是说对目录来说只会往大了分配但不删除）
     uint32_t i_open_cnts; // 文件打开次数
     bool write_deny; // 写文件前检测此标识，等价于一个锁
     uint32_t i_sectors[I_NODE_SECTOR_SIZE]; // 数据块索引，仅支持到1级索引
@@ -89,21 +89,49 @@ void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, ui
    @param p_part: struct Partition *: 分区信息
    @param p_inode:  struct Inode * :搜寻的inode节点
    @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
-   @param p_all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
    @param all_block_index: int32_t : 在所有块内的索引
    @return int32_t: 成果返回新分配的直接块地址, 否则为-1
 */
-int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
+int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index);
 
 /*
    @brief 释放inode的一个block, 释放成功会同步到p_all_block_lba内，及inode，磁盘等相关信息, 对于1级块，若1级块内无直接块则对应释放1级块
    @param p_part: struct Partition *: 分区信息
    @param p_inode:  struct Inode * :搜寻的inode节点
    @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
-   @param p_all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
    @param all_block_index: int32_t : 在所有块内的索引
    @return int32_t: 释放成功返回0， 否则-1， 若本身给出的块不存在，同时视为释放成功
 */
-int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
+int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t all_block_index);
+
+/*
+   @brief 从特定的inode内读取count数据量到data内
+   @param p_part: struct Partition *: 分区信息
+   @param p_inode:  struct Inode * :操作的inode节点
+   @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
+   @param p_all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_index: int32_t : 在所有块内的索引
+   @param pos: int32_t :读取的起点，字节为单位, 超出返回会导致失败
+   @param data: void *: 读取数据存入缓冲区
+   @param count: size_t :要读取的字节数
+   @return int32_t: 成功读取的字节数，读取失败返回-1
+*/
+int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count);
+
+/*
+   @brief 向特定的inode内写入data里的count数据量
+   @param p_part: struct Partition *: 分区信息
+   @param p_inode:  struct Inode * :操作的inode节点
+   @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
+   @param all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_index: int32_t : 在所有块内的索引
+   @param pos: int32_t :写入的起点，字节为单位, 起点仅能在文件大小内或者文件末尾
+   @param data: void *: 写入数据的缓冲区
+   @param count: size_t :要写入的字节数
+   @return int32_t: 成功写入的字节数，读取失败返回-1
+*/
+int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count);
 
 #endif
