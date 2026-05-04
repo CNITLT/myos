@@ -364,7 +364,7 @@ int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, ui
 
 
 int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
-    assert(p_part && p_inode && data && count);
+    assert(p_part && p_inode && data);
     if (pos < 0 || pos > p_inode->i_size) {
         printf("read_data_from_inode pos is invaild\n");
         return -1;
@@ -424,8 +424,8 @@ int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, ui
 
 
 int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
-    assert(p_part && p_inode && data && count);
-
+    assert(p_part && p_inode && data);
+    
     if (pos < 0 || pos > p_inode->i_size) {
         printf("write_data_to_inode pos is invaild\n");
         return -1;

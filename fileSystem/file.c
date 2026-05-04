@@ -126,7 +126,7 @@ int32_t file_close(struct File *p_file) {
     return 0;
 }
 
-int32_t file_write(struct File *p_file, void *data, size_t count) {
+int32_t file_write_book_version(struct File *p_file, void *data, size_t count) {
     assert(p_file && data && count);
     if (p_file->p_fd_inode->i_size + count > MAX_FILE_CONTENT_SIZE) {
         // 超出写入范围了
@@ -185,8 +185,7 @@ int32_t file_write(struct File *p_file, void *data, size_t count) {
     return write_count;
 }
 
-
-int32_t file_read(struct File *p_file, void *data, size_t count) {
+int32_t file_read_book_version(struct File *p_file, void *data, size_t count) {
     assert(p_file && data && count);
     // 修正下，如果剩下的可读取的数据量少，以少的为准
     count = MIN(count, (p_file->p_fd_inode->i_size - p_file->fd_pos));
@@ -242,4 +241,31 @@ int32_t file_read(struct File *p_file, void *data, size_t count) {
     sys_free(p_all_block_lba);
     sys_free(buff);
     return read_count;
+}
+
+
+// 自己魔改的版本
+int32_t file_write(struct File *p_file, void *data, size_t count) {
+    assert(p_file && data && count);
+    uint32_t *p_all_block_lba = NULL;
+    uint32_t all_block_lba_count = 0;
+    get_inode_all_block_lba(g_current_part, p_file->p_fd_inode, &p_all_block_lba, &all_block_lba_count);
+    int32_t res = write_data_to_inode(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, p_file->p_fd_inode->i_size, data, count);
+    sys_free(p_all_block_lba);
+    return res;
+}
+
+int32_t file_read(struct File *p_file, void *data, size_t count) {
+    assert(p_file && data && count);
+    // 修正下，如果剩下的可读取的数据量少，以少的为准
+    count = MIN(count, (p_file->p_fd_inode->i_size - p_file->fd_pos));
+    uint32_t *p_all_block_lba = NULL;
+    uint32_t all_block_lba_count = 0;
+    get_inode_all_block_lba(g_current_part, p_file->p_fd_inode, &p_all_block_lba, &all_block_lba_count);
+    int res = read_data_from_inode(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, p_file->fd_pos, data, count);
+    if (res != -1)  {
+        p_file->fd_pos += res;
+    }
+    sys_free(p_all_block_lba);
+    return res;
 }
