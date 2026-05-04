@@ -154,7 +154,8 @@ void fileSystem_init() {
         if (p_part->size_sector > 0) {
             ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, 1);
             printf("part:%s magic:0x%x size:%d\n", p_part->name, p_super_block->magic, p_part->size_sector);
-            if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER) {
+            // 目录项可能会自己改一下，如果改过了重新格式化
+            if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER || p_super_block->dir_entry_size != sizeof(struct Dir_entry)) {
                 printf("part:%s init fileSystem\n", p_part->name);
                 partition_format(p_part);
             } else {

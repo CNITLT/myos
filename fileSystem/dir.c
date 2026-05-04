@@ -26,7 +26,23 @@ void get_dir_all_block_lba(struct Partition* p_part, struct Dir *p_dir, uint32_t
     get_inode_all_block_lba(p_part, p_dir->p_inode, p_all_block_lba_ret, p_all_block_lba_count_ret);
 }
 
-bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
+void dir_close(struct Dir * p_dir) {
+    if (p_dir == &g_root_dir) {
+        return;
+    }
+    inode_close(p_dir->p_inode);
+    sys_free(p_dir);
+}
+
+void init_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type) {
+    assert(strlen(fileName) <= MAX_FILE_NAME_LENGTH);
+    memcpy(p_dir_entry->fileName, fileName, strlen(fileName));
+    p_dir_entry->i_no = inode_no;
+    p_dir_entry->f_type = f_type;
+    p_dir_entry->magic = DIR_ENTRY_MAGIC;
+}
+
+bool search_dir_entry_book_version(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
     get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
@@ -58,29 +74,12 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
     return false;
 }
 
-
-void dir_close(struct Dir * p_dir) {
-    if (p_dir == &g_root_dir) {
-        return;
-    }
-    inode_close(p_dir->p_inode);
-    sys_free(p_dir);
-}
-
-void init_dir_entry(struct Dir_entry *p_dir_entry, char *fileName, uint32_t inode_no, File_types f_type) {
-    assert(strlen(fileName) <= MAX_FILE_NAME_LENGTH);
-    memcpy(p_dir_entry->fileName, fileName, strlen(fileName));
-    p_dir_entry->i_no = inode_no;
-    p_dir_entry->f_type = f_type;
-}
-
-
-bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff) {
+bool sync_dir_entry_book_version(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff) {
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
     get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
     uint32_t dir_size = p_dir->p_inode->i_size;
-    uint32_t dir_entry_size = p_part->super_block->dir_entry_size;
+    uint32_t dir_entry_size = sizeof(struct Dir_entry);
     bool need_free_buff = false;
     Byte *buff = io_buff;
     if (!buff) {
@@ -171,4 +170,77 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
     }
     sys_free(p_all_block_lba);
     return false;
+}
+
+// 自己的魔改版本，目录项可跨扇区，紧凑版本
+bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
+    assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    uint32_t all_block_count;
+    uint32_t *p_all_block_lba;
+    get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
+    const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
+    
+    int pos = 0; // 当前读取的位置
+    while(pos < p_dir->p_inode->i_size) {
+        int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, pos, buff, max_used_read_size_in_once);
+        if (read_count == -1 || read_count == 0) {
+            break;
+        }
+        // 开始遍历目录项
+        struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
+        while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
+           if (!strcmp(p_dir_entry_iter->fileName, entry_name) && p_dir_entry_iter->f_type != FT_UNKNOWN && p_dir_entry_iter->magic == DIR_ENTRY_MAGIC) {
+                // 找到了就直接返回
+                memcpy(p_dir_entry, p_dir_entry_iter, sizeof(struct Dir_entry));
+                sys_free(buff);
+                sys_free(p_all_block_lba);
+                return true;
+            }
+            p_dir_entry_iter++;
+        }
+        pos += read_count;
+    }
+    sys_free(buff);
+    sys_free(p_all_block_lba);
+    return false;
+}
+
+// 自己的魔改版本，目录项可跨扇区，紧凑版本
+bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff) {
+    assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    uint32_t all_block_count;
+    uint32_t *p_all_block_lba;
+    get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
+    const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
+    
+    int pos = 0; // 当前读取的位置
+    int32_t empty_dir_entry_pos = -1;
+    while(pos < p_dir->p_inode->i_size) {
+        int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, pos, buff, max_used_read_size_in_once);
+        if (read_count == -1 || read_count == 0) {
+            break;
+        }
+        // 开始遍历目录项，查找空洞位置
+        struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
+        while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
+           if (p_dir_entry_iter->f_type == FT_UNKNOWN && p_dir_entry_iter->magic == DIR_ENTRY_MAGIC) {
+                empty_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff);
+                break;
+            }
+            p_dir_entry_iter++;
+        }
+        pos += read_count;
+    }
+    if (empty_dir_entry_pos == -1) {
+        empty_dir_entry_pos = p_dir->p_inode->i_size;
+    }
+    int write_res = write_data_to_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, empty_dir_entry_pos, p_dir_entry, sizeof(struct Dir_entry));
+    
+    sys_free(buff);
+    sys_free(p_all_block_lba);
+    return write_res > 0;
 }

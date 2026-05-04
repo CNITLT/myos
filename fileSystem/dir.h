@@ -6,7 +6,8 @@
 
 #define DIR_CACHE_SIZE 512
 #define MAX_FILE_NAME_LENGTH 16 
-
+// dire ascii码的十六进制(0x64697265)，反着来的
+#define DIR_ENTRY_MAGIC 0x65726964
 struct Dir {
     struct Inode* p_inode;
     uint32_t dir_pos; // 目录内遍历偏移，运行时使用
@@ -20,7 +21,8 @@ struct Dir_entry {
     char fileName[MAX_FILE_NAME_LENGTH]; // 文件名
     uint32_t i_no; // inode节点编号
     File_types f_type;
-};
+    uint32_t magic; // 魔改后带一个魔数
+} __attribute__((packed));
 
 /*
     @brief 打开根目录
