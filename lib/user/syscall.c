@@ -43,3 +43,11 @@ int32_t lseek(int32_t fd, int32_t offset, uint8_t whence) {
 int32_t unlink(const char *path) {
     return syscall(SYS_UNLINK, path);
 }
+
+struct Dir *opendir(const char *path) {
+    return syscall(SYS_OPENDIR, path);
+}
+
+int32_t closedir(struct Dir *p_dir) {
+    return syscall(SYS_CLOSEDIR, p_dir);
+}

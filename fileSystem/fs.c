@@ -749,3 +749,42 @@ int32_t sys_mkdir(const char *path) {
     sys_free(buff);
     return res;
 }
+
+struct Dir *sys_opendir(const char *path) {
+    assert(strlen(path) < MAX_PATH_LENGTH);
+    if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
+        // 能判断是根目录的情况
+        // 再打开一份，不直接返回g_root_dir
+        return dir_open(g_current_part, g_current_part->super_block->root_inode_no);
+    }
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    memset(p_path_search_record, 0, sizeof(struct Path_search_record));
+    int inode_no = search_file(path, p_path_search_record);
+    bool has_parent_dir = (path_depth(path) == path_depth(p_path_search_record->searched_path));
+    bool is_found = has_parent_dir && inode_no != -1;
+
+    struct Dir *p_dir_res = NULL;
+    do {
+        if (!is_found) {
+            printf("sys_opendir path %s not found\n", path);
+            break;
+        }
+        if (p_path_search_record->file_type != FT_DIRECTORY) {
+            printf("sys_opendir path %s is not dir\n", path);
+            break;
+        }
+        p_dir_res = dir_open(g_current_part, inode_no);
+    }while(0);
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
+    return p_dir_res;
+}
+
+int32_t sys_closedir(struct Dir *p_dir) {
+    if (!p_dir) {
+        return 0;
+    }
+    dir_close(p_dir);
+    return 0;
+}

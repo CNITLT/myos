@@ -17,6 +17,7 @@ void open_root_dir(struct Partition* p_part) {
 
 struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
     struct Dir * p_dir = (struct Dir *)sys_malloc(sizeof(struct Dir));
+    assert(p_dir);
     p_dir->p_inode = inode_open(p_part, inode_no);
     p_dir->dir_pos = 0;
     return p_dir;

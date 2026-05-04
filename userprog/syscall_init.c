@@ -23,6 +23,8 @@ void syscall_init(){
     syscall_table[SYS_READ] = sys_read;
     syscall_table[SYS_LSEEK] = sys_lseek;
     syscall_table[SYS_UNLINK] = sys_unlink;
+    syscall_table[SYS_OPENDIR] = sys_opendir;
+    syscall_table[SYS_CLOSEDIR] = sys_closedir;
 }
 
 pid_t sys_getpid(void){

@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "stddef.h"
 #include "syscall_init.h"
+struct Dir;
 
 enum SYSCALL_NR {
     SYS_GETPID = 0,
@@ -12,6 +13,8 @@ enum SYSCALL_NR {
     SYS_READ,
     SYS_LSEEK,
     SYS_UNLINK,
+    SYS_OPENDIR,
+    SYS_CLOSEDIR,
  };
 /*
 @brief 用户态的系统调用入口
@@ -78,4 +81,19 @@ int32_t lseek(int32_t fd, int32_t offset, uint8_t whence);
  * @return 成功返回0， 否则-1
 */
 int32_t unlink(const char *path);
+
+
+/*
+ * @brief 打开一个目录
+ * @param path: const char *: 目录路径
+ * @return 成功返回指向dir结构的指针，否则NULL
+*/
+struct Dir *opendir(const char *path);
+
+/*
+ * @brief 关闭一个目录
+ * @param p_dir: struct Dir*: 目录指针
+ * @return 成功0，否则-1
+*/
+int32_t closedir(struct Dir *p_dir);
 #endif
