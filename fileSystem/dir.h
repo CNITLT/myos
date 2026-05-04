@@ -8,10 +8,13 @@
 #define MAX_FILE_NAME_LENGTH 16 
 // dire ascii码的十六进制(0x64697265)，反着来的
 #define DIR_ENTRY_MAGIC 0x65726964
+
+struct Dir_entry;
 struct Dir {
     struct Inode* p_inode;
     uint32_t dir_pos; // 目录内遍历偏移，运行时使用
     Byte dir_buff[DIR_CACHE_SIZE]; // 目录缓存
+    struct Dir_entry *p_dir_entry; // 指向缓存内的指针或者为NULL
 };
 
 extern struct Dir g_root_dir;
@@ -93,5 +96,16 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
 */ 
 bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff);
 
+/*
+ * @brief 读取目录项，读取后移动到下一个,直到返回NULL
+ * @param param p_dir: struct Dir *: 目录信息
+ * @return struct Dir_entry *目录项, 读取结束后返回NULL
+*/
+struct Dir_entry * dir_read(struct Dir *p_dir);
 
+/*
+ * @brief 重置目录的读取游标
+ * @param param p_dir: struct Dir *: 目录信息
+*/
+void dir_rewind(struct Dir *p_dir);
 #endif

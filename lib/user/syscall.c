@@ -51,3 +51,11 @@ struct Dir *opendir(const char *path) {
 int32_t closedir(struct Dir *p_dir) {
     return syscall(SYS_CLOSEDIR, p_dir);
 }
+
+struct Dir_entry * readdir(struct Dir *p_dir) {
+    return syscall(SYS_READDIR, p_dir);
+}
+
+void rewinddir(struct Dir *p_dir) {
+    syscall(SYS_REWINDDIR, p_dir);
+}

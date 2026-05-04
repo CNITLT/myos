@@ -4,6 +4,7 @@
 #include "stddef.h"
 #include "syscall_init.h"
 struct Dir;
+struct Dir_entry;
 
 enum SYSCALL_NR {
     SYS_GETPID = 0,
@@ -15,6 +16,8 @@ enum SYSCALL_NR {
     SYS_UNLINK,
     SYS_OPENDIR,
     SYS_CLOSEDIR,
+    SYS_READDIR,
+    SYS_REWINDDIR,
  };
 /*
 @brief 用户态的系统调用入口
@@ -96,4 +99,17 @@ struct Dir *opendir(const char *path);
  * @return 成功0，否则-1
 */
 int32_t closedir(struct Dir *p_dir);
+
+/*
+ * @brief 读取目录项，读取后移动到下一个,直到返回NULL
+ * @param param p_dir: struct Dir *: 目录信息
+ * @return struct Dir_entry *目录项, 读取结束后返回NULL
+*/
+struct Dir_entry * readdir(struct Dir *p_dir);
+
+/*
+ * @brief 重置目录的读取游标
+ * @param param p_dir: struct Dir *: 目录信息
+*/
+void rewinddir(struct Dir *p_dir);
 #endif

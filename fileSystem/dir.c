@@ -12,6 +12,7 @@ void open_root_dir(struct Partition* p_part) {
     // while(1){};
     g_root_dir.p_inode = inode_open(p_part, p_part->super_block->root_inode_no);
     g_root_dir.dir_pos = 0;
+    g_root_dir.p_dir_entry = NULL;
     //printf("debug open_root_dir p_part:%x name:%s root_inode_no:%d g_root_dir.inode:0x%x\n", p_part, p_part->name,  p_part->super_block->root_inode_no, g_root_dir.p_inode); 
 }
 
@@ -20,6 +21,7 @@ struct Dir *dir_open(struct Partition* p_part, uint32_t inode_no) {
     assert(p_dir);
     p_dir->p_inode = inode_open(p_part, inode_no);
     p_dir->dir_pos = 0;
+    p_dir->p_dir_entry = NULL;
     return p_dir;
 }
 
@@ -195,6 +197,7 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
         if (read_count == -1 || read_count == 0) {
             break;
         }
+        pos += read_count;
         // 开始遍历目录项
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -208,7 +211,6 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
             }
             p_dir_entry_iter++;
         }
-        pos += read_count;
     }
     sys_free(buff);
     sys_free(p_all_block_lba);
@@ -236,6 +238,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
         if (read_count == -1 || read_count == 0) {
             break;
         }
+        pos += read_count;
         // 开始遍历目录项，查找空洞位置
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -245,7 +248,6 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
             }
             p_dir_entry_iter++;
         }
-        pos += read_count;
     }
     if (empty_dir_entry_pos == -1) {
         empty_dir_entry_pos = p_dir->p_inode->i_size;
@@ -282,6 +284,7 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
         if (read_count == -1 || read_count == 0) {
             break;
         }
+        pos += read_count;
         // 开始遍历目录项，查找空洞位置
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -295,7 +298,6 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
             }
             p_dir_entry_iter++;
         }
-        pos += read_count;
     }
 
     int write_count = -1;
@@ -309,4 +311,67 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
     sys_free(buff);
     sys_free(p_all_block_lba);
     return write_count > 0;
+}
+
+struct Dir_entry * dir_read(struct Dir *p_dir) {
+    if (!p_dir) {
+        return NULL;
+    }
+
+    // 这种情况是读取完后的
+    if (p_dir->p_dir_entry == NULL && p_dir->dir_pos != 0) {
+        return NULL;
+    }
+    // 先从缓存内读取
+    if (p_dir->p_dir_entry != NULL) {
+        p_dir->p_dir_entry++;
+        while((uint32_t)p_dir->p_dir_entry < (uint32_t)p_dir->dir_buff + DIR_CACHE_SIZE) {
+            if (p_dir->p_dir_entry->f_type != FT_UNKNOWN && p_dir->p_dir_entry->magic == DIR_ENTRY_MAGIC) {
+                return p_dir->p_dir_entry;
+            }
+        }
+    }
+    // 这种情况下，说明缓存里的都是无效的, 从磁盘里读
+    const struct Partition* p_part = g_current_part;
+    assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    Byte *buff = p_dir->dir_buff;
+    uint32_t all_block_count;
+    uint32_t *p_all_block_lba;
+    get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
+ 
+    const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
+    const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
+     
+    while(p_dir->dir_pos < p_dir->p_inode->i_size) {
+        int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, p_dir->dir_pos, buff, max_used_read_size_in_once);
+        // printf("debug seach_dir_entry read p_part:0x%x dir_inode:0x%x pos:%d max_read:%d res:%d\n",p_part, p_dir->p_inode, pos, max_used_read_size_in_once, read_count);
+        if (read_count == -1 || read_count == 0) {
+            break;
+        }
+        p_dir->dir_pos += read_count;
+        // 开始遍历目录项
+        struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
+        while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
+           // printf("debug seach_dir_entry p_dir_entry_iter name:%s target:%s cmp:%d iter type:%d magic:0x%x\n", p_dir_entry_iter->fileName, entry_name,strcmp(p_dir_entry_iter->fileName, entry_name), p_dir_entry_iter->f_type, p_dir_entry_iter->magic);
+           if (p_dir_entry_iter->f_type != FT_UNKNOWN && p_dir_entry_iter->magic == DIR_ENTRY_MAGIC) {
+                // 找到了就直接返回
+                p_dir->p_dir_entry = p_dir_entry_iter;
+                sys_free(p_all_block_lba);
+                return p_dir->p_dir_entry;
+            }
+            p_dir_entry_iter++;
+        }
+    }
+    // 这种情况下遍历完了没有找到的
+    p_dir->p_dir_entry = NULL;
+    sys_free(p_all_block_lba);
+    return p_dir->p_dir_entry;
+}
+
+void dir_rewind(struct Dir *p_dir) {
+    if (!p_dir) {
+        return;
+    }
+    p_dir->p_dir_entry = NULL;
+    p_dir->dir_pos = 0;
 }

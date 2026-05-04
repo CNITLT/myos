@@ -788,3 +788,11 @@ int32_t sys_closedir(struct Dir *p_dir) {
     dir_close(p_dir);
     return 0;
 }
+
+struct Dir_entry * sys_readdir(struct Dir *p_dir) {
+    return dir_read(p_dir);
+}
+
+void sys_rewinddir(struct Dir *p_dir) {
+    dir_rewind(p_dir);
+}

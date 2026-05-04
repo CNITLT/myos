@@ -8,6 +8,8 @@
 #include "process.h"
 #include "list.h"
 #include "fs.h"
+#include "syscall.h"
+#include "dir.h"
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
 struct task_struct* idle_thread_pcb; //idle空闲进程
@@ -277,8 +279,15 @@ void main_thread_func(void *args){
     open_interrupt();
     init_other_in_main_thread();
     // 其他测试逻辑
-    int res = sys_mkdir("/a");
-    printf("call sys_mkdir res:%d\n", res);
+    struct Dir *p_dir = sys_opendir("/");
+    struct Dir_entry *p_dir_entry;
+    while(p_dir_entry = readdir(p_dir)) {
+        printf("readdir p_dir_entry:0x%x name:%s\n", p_dir_entry, p_dir_entry->fileName);
+    }
+
+
+    // int res = sys_mkdir("/a");
+    // printf("call sys_mkdir res:%d\n", res);
     // char *fileName = "/e2.txt";
     // printf("call sys_unlink %s\n", fileName);
     // int res = sys_unlink(fileName);
