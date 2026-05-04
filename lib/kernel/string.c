@@ -39,6 +39,8 @@ int memcmp(const void* a,const void *b, size_t count){
         if(*p_a != *p_b){
             return *p_a < *p_b?-1:1;       
         }
+        p_a++;
+        p_b++;
     }
     return 0;
 }
@@ -68,8 +70,9 @@ char* strcpy(char* dst,const char * src){
 int strcmp(const char *a,const char *b){
     int res = memcmp(a, b, strlen(a) > strlen(b)?strlen(b)+1:strlen(a)+1);
     if (res == 0 && (strlen(a) != strlen(b))) {
-        return strlen(a) > strlen(b) ? 1 : -1;
+        res = strlen(a) > strlen(b) ? 1 : -1;
     }
+    // printf("debug strcmp a:%s b:%s length a:%d b:%d res:%d\n",a, b, strlen(a), strlen(b), res);
     return res;
 }
 

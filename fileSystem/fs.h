@@ -134,6 +134,12 @@ int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence);
 int32_t sys_unlink(const char *path);
 
 /*
+ * @brief 创建目录, 只能在父目录存在下创建,若中间的目录不存在则失败
+ * @param path: const char *: 目录路径
+ * @return 成功返回0， 否则-1
+*/
+int32_t sys_mkdir(const char *path);
+/*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
  * @return 成功返回全局的文件描述符

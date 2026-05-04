@@ -277,11 +277,12 @@ void main_thread_func(void *args){
     open_interrupt();
     init_other_in_main_thread();
     // 其他测试逻辑
-    
-    char *fileName = "/e2.txt";
-    printf("call sys_unlink %s\n", fileName);
-    int res = sys_unlink(fileName);
-    printf("sys_unlink %s res:%d\n", fileName, res);
+    int res = sys_mkdir("/a");
+    printf("call sys_mkdir res:%d\n", res);
+    // char *fileName = "/e2.txt";
+    // printf("call sys_unlink %s\n", fileName);
+    // int res = sys_unlink(fileName);
+    // printf("sys_unlink %s res:%d\n", fileName, res);
     
     // int fd = sys_open(fileName, O_CREAT | O_RDWR);
     // printf("sys_open first open fd:%d\n", fd);

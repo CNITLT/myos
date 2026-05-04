@@ -287,7 +287,7 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
     assert(p_searched_record != NULL);
     memset(p_searched_record, 0, sizeof(struct Path_search_record));
     if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
-        printf("search_file search target:%s is root dir\n",path);
+        printf("search_file search target:%s is root dir cmp:%d %d %d\n",path, strcmp(path, "/"), strcmp(path, "/."), strcmp(path, "/.."));
         // 根目录及不存在的根目录的父目录的情况
         p_searched_record->p_parent_dir = &g_root_dir;
         p_searched_record->file_type = FT_DIRECTORY;
@@ -366,7 +366,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
     int fd_index = -1;
     struct Inode *p_inode = NULL;
     do {
-        p_inode = (struct Inode *)sys_malloc(sizeof(struct Inode));
+        p_inode = (struct Inode *)sys_malloc_in_kernel(sizeof(struct Inode));
         if (!p_inode) {
             printf("file_create sys_malloc inode fail");
             rollbakc_step = 1;
@@ -414,7 +414,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
         } else {
             // 失败释放对应资源，但对于磁盘则不回滚
             g_file_table[fd_index].p_fd_inode = NULL;
-            sys_free(p_inode);
+            sys_free_in_kernel(p_inode);
         }
 
         sys_free(buff);
@@ -429,7 +429,7 @@ int32_t file_create(struct Dir *p_dir, char *filename, uint8_t flag) {
     case 3:
         memset(g_file_table + fd_index, 0 , sizeof(struct File));
     case 2:
-        sys_free(p_inode);
+        sys_free_in_kernel(p_inode);
     case 1:
         // inode空间分配失败，回滚inode_bit_map
         inode_bitmap_free(g_current_part, inode_no);
@@ -635,5 +635,117 @@ int32_t sys_unlink(const char *path) {
 
     dir_close(p_path_search_record->p_parent_dir);
     sys_free(p_path_search_record);
+    return res;
+}
+
+int32_t sys_mkdir(const char *path) {
+    assert(strlen(path) < MAX_PATH_LENGTH);
+    assert(2 * sizeof(struct Dir_entry) < BLOCK_SIZE);
+    // 先检查路径是否存在
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    memset(p_path_search_record, 0, sizeof(struct Path_search_record));
+    int inode_no = search_file(path, p_path_search_record);
+    bool has_parent_dir = (path_depth(path) == path_depth(p_path_search_record->searched_path));
+    bool is_found = has_parent_dir && inode_no != -1;
+    // 不能创建根目录
+    assert(inode_no != 0);
+    int32_t res = -1;
+    int32_t buff_size = 2 * BLOCK_SIZE;
+    Byte *buff = (Byte *)sys_malloc(buff_size);
+    do {
+        if (!buff) {
+            printf("sys_mkdir malloc buff faild\n", path);
+            break;
+        }
+        if (!has_parent_dir) {
+            printf("sys_mkdir dir %s can't recursion make\n", path);
+            break;
+        }
+
+        if (is_found) {
+            printf("sys_mkdir dir %s is exit \n", path);
+            break;
+        }
+
+        if (p_path_search_record->file_type != FT_DIRECTORY) {
+            printf("sys_mkdir dir %s is file \n", path);
+            break;
+        }
+
+        // 说明前面的检查通过, 开始创建流程
+        // 用于指定回滚步骤
+        int32_t rollbakc_step = 0;
+        // 先分配一个inode号
+        int32_t inode_no = inode_bitmap_alloc(g_current_part);
+        if (inode_no == -1) {
+            printf("sys_mkdir inode_bitmap_alloc fail\n");
+            break;
+        }
+
+        struct Inode *p_inode = NULL;
+        struct Dir *p_parent_dir = p_path_search_record->p_parent_dir;
+        uint32_t *p_all_block_lba = NULL;
+        uint32_t all_block_lba_count = 0;
+        do {
+            // 这里的顺序和书上不一样
+            // 先分配inode
+            p_inode = (struct Inode *)sys_malloc_in_kernel(sizeof(struct Inode));
+            if (!p_inode) {
+                printf("file_create sys_malloc inode fail");
+                rollbakc_step = 1;
+                break;
+            }
+            inode_init(p_inode, inode_no);
+
+            memset(buff, 0, buff_size);
+            inode_sync(g_current_part, p_inode, buff);
+            // 同步bitmap
+            bitmap_sync(g_current_part, inode_no, Bitmap_type_inode);
+            
+            // 向父目录写入目录项
+            memset(buff, 0, buff_size);
+            struct Dir_entry *p_dir_entry = (struct Dir_entry*)buff;
+            init_dir_entry(p_dir_entry, strrchr(path, '/') + 1, inode_no, FT_DIRECTORY);
+            if (!sync_dir_entry(g_current_part, p_parent_dir, p_dir_entry, buff + BLOCK_SIZE)) {
+                printf("sys_mkdir sync_dir_entry parent dir_entry faild\n");
+                rollbakc_step = 2;
+                break;
+            }
+
+            // 向目录代表的inode内写入初始数据
+            memset(buff, 0, buff_size);
+            init_dir_entry(p_dir_entry, ".", inode_no, FT_DIRECTORY);
+            p_dir_entry++;
+            init_dir_entry(p_dir_entry, "..", p_parent_dir->p_inode->i_no, FT_DIRECTORY);
+
+            
+            get_inode_all_block_lba(g_current_part, p_inode, &p_all_block_lba, &all_block_lba_count);
+            // 然后写入目录内容
+            int write_count = write_data_to_inode(g_current_part, p_inode, p_all_block_lba, all_block_lba_count, 0, buff, 2 * sizeof(struct Dir_entry));
+            assert(write_count > 0);
+
+            sys_free_in_kernel(p_inode);
+            sys_free(p_all_block_lba);
+            res = 0;
+        } while(0);
+
+
+        // 这里基本不用break，回滚步骤就是如此
+        switch (rollbakc_step) {
+            case 2:
+                inode_release(g_current_part, inode_no);
+                sys_free_in_kernel(p_inode);
+            case 1:
+                // inode空间分配失败，回滚inode_bit_map
+                inode_bitmap_free(g_current_part, inode_no);
+                res = -1;
+            default:
+                break;
+        }
+    } while (0);
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
+    sys_free(buff);
     return res;
 }

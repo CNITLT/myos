@@ -498,7 +498,7 @@ int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uin
         int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
         // 本次实际写入的大小
         int32_t write_size_in_once = MIN(free_size_in_sector, next_count);
-        printf("debug write_data_to_inode i_size:%d \n", p_inode->i_size);
+        // printf("debug write_data_to_inode i_size:%d \n", p_inode->i_size);
         // 存在的会就是读取，不存在的会先分配然后返回
         int32_t block_lba = alloc_inode_all_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
         if (block_lba == -1) {
