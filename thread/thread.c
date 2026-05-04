@@ -286,11 +286,11 @@ void main_thread_func(void *args){
     printf("sys_open %s fd:%d\n",fileName, fd);
 
 
-    //char * textStr = "hello sys_write\n";
-    //write(fd, textStr, strlen(textStr));
+    char * textStr = "hello sys_write\n";
+    write(fd, textStr, strlen(textStr));
 
-    //textStr =  "second call sys_write\n";
-    //sys_write(fd, textStr, strlen(textStr));
+    // textStr =  "second call sys_write\n";
+    // sys_write(fd, textStr, strlen(textStr));
     char *buff = malloc(BLOCK_SIZE);
     
     memset(buff, 0, BLOCK_SIZE);

@@ -74,7 +74,13 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
     set_interrupt_state(old_intr_state);
     // printf("debug inode_open opened not exit will find in disk\n");
     // while (1);
-    
+    // 先从bitmap看看这个inode有无被分配
+    bit_state inode_state = bitmap_get(&p_part->inode_bitmap, inode_no);
+    if (inode_state == BIT_STATE_UNUSE) {
+        return NULL;
+    }
+
+
     // 找不到就从磁盘打开
     void *io_buff = sys_malloc(2 * SECTOR_SIZE_BYTE);
     // inode给内核关联，分配的空间只能是内存中的
@@ -116,6 +122,38 @@ void inode_close(struct Inode* p_inode) {
     }
     set_interrupt_state(old_intr_state);
 }
+
+
+bool inode_release(struct Partition *p_part, uint32_t inode_no) {
+    assert(inode_no < MAX_FILES_PER_PART);
+    // 先打开inode
+    struct Inode *p_inode = inode_open(p_part, inode_no);
+    // 打开失败，说明是不存在的inode
+    if (!p_inode) {
+        printf("inode_release release a not exist inode, failed\n");
+        return false;
+    }
+    // 其他进程也在打开就不能删
+    if (p_inode->i_open_cnts > 1) {
+        printf("inode_release release a opened inode, failed\n");
+        return false;
+    }
+    p_inode->write_deny = true;
+    uint32_t *p_all_block_lba = NULL;
+    uint32_t all_block_lba_count = 0;
+    get_inode_all_block_lba(p_part, p_inode, &p_all_block_lba, &all_block_lba_count);
+    
+    for(int i = all_block_lba_count - 1; i >= 0; i--) {
+        free_inode_all_block(p_part, p_inode, p_all_block_lba, all_block_lba_count, i);
+    }
+    sys_free(p_all_block_lba);
+    // 块释放完成开始对inode进行释放
+    inode_bitmap_free(p_part, inode_no);
+    bitmap_sync(p_part, inode_no, Bitmap_type_inode);
+    inode_close(p_inode);
+    return true;
+}
+
 
 void inode_init(struct Inode* p_inode, uint32_t inode_no) {
     p_inode->i_no = inode_no;

@@ -44,7 +44,6 @@ void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_posi
 */
 void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff);
 
-
 /**
  *  @brief 从内存中已经打开的inode列表里找到有无对应的inode信息
     @param p_part : struct Partition * : 扇区信息
@@ -55,7 +54,7 @@ struct Inode* find_opened_inode(struct Partition *p_part, uint32_t inode_no);
 
 /*
     @brief 打开inode,即加载inode信息到内存
-    @param p_part : struct Partition * : 扇区信息
+    @param p_part : struct Partition * : 分区信息
     @param inode_no : uint32_t:  inode编号
     @return struct Inode * 打开的inode信息地址
 */
@@ -67,6 +66,14 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no);
 */
 void inode_close(struct Inode* p_inode);
 
+
+/*
+    @brief  回收inode_no所代表的资源
+    @param p_part : struct Partition * : 分区信息
+    @param inode_no : uint32_t:  inode编号
+    @return 成功返回true否则false
+*/
+bool inode_release(struct Partition *p_part, uint32_t inode_no);
 
 /*
     @brief 初始化inode
