@@ -184,19 +184,20 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
     uint32_t *p_all_block_lba;
     get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
  
-   
     const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
     const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
     
     int pos = 0; // 当前读取的位置
     while(pos < p_dir->p_inode->i_size) {
         int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, pos, buff, max_used_read_size_in_once);
+        // printf("debug seach_dir_entry read p_part:0x%x dir_inode:0x%x pos:%d max_read:%d res:%d\n",p_part, p_dir->p_inode, pos, max_used_read_size_in_once, read_count);
         if (read_count == -1 || read_count == 0) {
             break;
         }
         // 开始遍历目录项
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
+           // printf("debug seach_dir_entry p_dir_entry_iter name:%s target:%s cmp:%d iter type:%d magic:0x%x\n", p_dir_entry_iter->fileName, entry_name,strcmp(p_dir_entry_iter->fileName, entry_name), p_dir_entry_iter->f_type, p_dir_entry_iter->magic);
            if (!strcmp(p_dir_entry_iter->fileName, entry_name) && p_dir_entry_iter->f_type != FT_UNKNOWN && p_dir_entry_iter->magic == DIR_ENTRY_MAGIC) {
                 // 找到了就直接返回
                 memcpy(p_dir_entry, p_dir_entry_iter, sizeof(struct Dir_entry));
@@ -298,36 +299,13 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
 
     int write_count = -1;
     if (delete_dir_entry_pos != -1) {
+        // printf("debug delete_dir_entry write delete entry\n");
         // 标记一下视为删除
-        p_dir_entry->f_type == FT_UNKNOWN;
+        p_dir_entry->f_type = FT_UNKNOWN;
         write_count = write_data_to_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, delete_dir_entry_pos, p_dir_entry, sizeof(struct Dir_entry));
     }
 
     sys_free(buff);
     sys_free(p_all_block_lba);
     return write_count > 0;
-}
-
-/*
- * @brief 删除文件对应的目录项和回收inode资源
- * @param p_dir: struct Dir * :文件所在的目录
- * @param p_dir_entry: struct Dir_entry *: 文件的目录项
- * @param buff : void *: 主调函数提供的缓冲区大小，要求至少1个扇区大小
- * @return 成功删除返回true 否则false
-*/
-static bool file_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
-    assert(p_dir && p_dir_entry);
-    if (p_dir_entry->f_type != FT_REGULLAR) {
-        printf("file_delete ftype is not FT_REGULLAR, faild\n");
-        return false;
-    }
-    bool res = inode_release(g_current_part, p_dir_entry->i_no);
-    if (!res) {
-        printf("file_delete inode_release faild\n");
-        return false;
-    }
-    // 理论上不应该会失败，失败了也没什么办法回滚，就这样吧，直接断言一定成功
-    res = delete_dir_entry(g_current_part, p_dir, p_dir_entry, buff);
-    assert(res);
-    return true;
 }

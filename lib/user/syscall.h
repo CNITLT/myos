@@ -10,6 +10,8 @@ enum SYSCALL_NR {
     SYS_FREE,
     SYS_WRITE,
     SYS_READ,
+    SYS_LSEEK,
+    SYS_UNLINK,
  };
 /*
 @brief 用户态的系统调用入口
@@ -60,4 +62,20 @@ int32_t write(int32_t fd, const void *data, size_t count);
  * @return 成功返回读取的数据量，失败返回-1
 */
 int32_t read(int32_t fd, const void *data, size_t count);
+
+/*
+ * @brief 调整文件描述符里的游标
+ * @param fd: int32_t :待读取的文件描述符索引
+ * @param offset: int32_t : 偏移量
+ * @param whence: uint8_t : 枚举值，偏移的起点
+ * @return int32_t 新的游标位置, 失败返回-1
+*/
+int32_t lseek(int32_t fd, int32_t offset, uint8_t whence);
+
+/*
+ * @brief 删除非目录类型的文件
+ * @param path: const char *: 文件路径
+ * @return 成功返回0， 否则-1
+*/
+int32_t unlink(const char *path);
 #endif

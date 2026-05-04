@@ -277,29 +277,34 @@ void main_thread_func(void *args){
     open_interrupt();
     init_other_in_main_thread();
     // 其他测试逻辑
-    char *fileName = "/d.txt";
-    int fd = sys_open(fileName, O_CREAT | O_RDWR);
-    printf("sys_open first open fd:%d\n", fd);
-    if (fd == -1) {
-        fd = sys_open(fileName, O_RDWR);
-    }
-    printf("sys_open %s fd:%d\n",fileName, fd);
-
-
-    char * textStr = "hello sys_write\n";
-    write(fd, textStr, strlen(textStr));
-
-    // textStr =  "second call sys_write\n";
-    // sys_write(fd, textStr, strlen(textStr));
-    char *buff = malloc(BLOCK_SIZE);
     
-    memset(buff, 0, BLOCK_SIZE);
-    int read_count = read(fd, buff, BLOCK_SIZE);
-    while(-1 != read_count) {
-        printf("read count:%d content:%s\n",read_count, buff);
-        memset(buff, 0, BLOCK_SIZE);
-        read_count = read(fd, buff, BLOCK_SIZE);
-    }
+    char *fileName = "/e2.txt";
+    printf("call sys_unlink %s\n", fileName);
+    int res = sys_unlink(fileName);
+    printf("sys_unlink %s res:%d\n", fileName, res);
+    
+    // int fd = sys_open(fileName, O_CREAT | O_RDWR);
+    // printf("sys_open first open fd:%d\n", fd);
+    // if (fd == -1) {
+    //     fd = sys_open(fileName, O_RDWR);
+    // }
+    // printf("sys_open %s fd:%d\n",fileName, fd);
+
+    // char * textStr = "hello sys_write\n";
+    // write(fd, textStr, strlen(textStr));
+
+    // // textStr =  "second call sys_write\n";
+    // // sys_write(fd, textStr, strlen(textStr));
+    // char *buff = malloc(BLOCK_SIZE);
+    
+    // memset(buff, 0, BLOCK_SIZE);
+    // int read_count = read(fd, buff, BLOCK_SIZE);
+    // while(-1 != read_count) {
+    //     printf("read count:%d content:%s\n",read_count, buff);
+    //     memset(buff, 0, BLOCK_SIZE);
+    //     read_count = read(fd, buff, BLOCK_SIZE);
+    // }
+    
 
     while(1){}
 }

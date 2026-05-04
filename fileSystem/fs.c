@@ -122,15 +122,13 @@ void partition_format(struct Partition *part) {
     // 根目录项目写入 .和..
     memset(buff, 0, buf_size);  
     struct Dir_entry *p_now_entry =  (struct Dir_entry *)buff;
-    memcpy(p_now_entry->fileName, ".", 1);
-    p_now_entry->i_no = 0;
-    p_now_entry->f_type = FT_DIRECTORY;
+    init_dir_entry(p_now_entry, ".", 0, FT_DIRECTORY);
 
     struct Dir_entry *p_parent_entry = ++p_now_entry;
     memcpy(p_parent_entry->fileName, "..", 2);
     // 根目录只能指向自己
-    p_now_entry->i_no = 0;
-    p_now_entry->f_type = FT_DIRECTORY;
+    init_dir_entry(p_now_entry, "..", 0, FT_DIRECTORY);
+
     ide_write(part_disk, p_super_block->data_area_lba_base, buff, 1);
     sys_free(buff);
     sys_free(p_super_block);
@@ -586,4 +584,45 @@ int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence) {
     new_pos = MIN(file_size, new_pos);
     p_file->fd_pos = new_pos;
     return p_file->fd_pos;
+}
+
+int32_t sys_unlink(const char *path) {
+    assert(strlen(path) < MAX_PATH_LENGTH);
+    // 先检查文件是否存在
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    memset(p_path_search_record, 0, sizeof(struct Path_search_record));
+    int inode_no = search_file(path, p_path_search_record);
+    bool is_found = (path_depth(path) == path_depth(p_path_search_record->searched_path)) && inode_no != -1;
+    // 根目录不能删除
+    assert(inode_no != 0);
+    int32_t res = -1;
+    do {
+        if (!is_found) {
+            printf("sys_unlink file %s is not found \n", path);
+            break;
+        }
+
+        if (p_path_search_record->file_type != FT_REGULLAR) {
+            printf("sys_unlink file %s is not file \n", path);
+            break;
+        }
+
+        char *filename = strrchr(path, '/') + 1;
+        struct Dir_entry dir_entry = {0};
+        bool search_res = search_dir_entry(g_current_part, p_path_search_record->p_parent_dir, filename, &dir_entry);
+        if (!search_res) {
+            printf("sys_unlink can't found file in dir\n");
+            break;
+        }
+        bool delete_res = file_delete(p_path_search_record->p_parent_dir, &dir_entry, NULL);
+        if(!delete_res) {
+            printf("sys_unlink file_delete faild\n");
+            break;
+        }
+        res = 0;
+    }while (0);
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
+    return res;
 }

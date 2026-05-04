@@ -4,6 +4,8 @@
 #include "inode.h"
 #include "ide.h"
 
+struct Dir;
+struct Dir_entry;
 // 整个系统所有进程同时打开的文件描述符数最大值
 // 同文件多次打开，算不同文件描述符
 #define MAX_FD_SIZE 256
@@ -111,4 +113,13 @@ int32_t file_write(struct File *p_file, void *data, size_t count);
 */
 int32_t file_read(struct File *p_file, void *data, size_t count);
 
+
+/*
+ * @brief 删除文件对应的目录项和回收inode资源
+ * @param p_dir: struct Dir * :文件所在的目录
+ * @param p_dir_entry: struct Dir_entry *: 文件的目录项
+ * @param buff : void *: 主调函数提供的缓冲区大小，要求至少1个扇区大小, 可为NULL,此时为内部自行分配
+ * @return 成功删除返回true 否则false
+*/
+bool file_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff);
 #endif

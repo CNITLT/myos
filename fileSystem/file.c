@@ -87,6 +87,7 @@ int32_t file_open(uint32_t inode_no, uint8_t flag) {
     }
 
     g_file_table[fd_index].p_fd_inode = inode_open(g_current_part, inode_no);
+    assert(g_file_table[fd_index].p_fd_inode);
     g_file_table[fd_index].fd_pos = 0;
     g_file_table[fd_index].fd_flag = flag;
 
@@ -156,7 +157,7 @@ int32_t file_write_book_version(struct File *p_file, void *data, size_t count) {
         int32_t free_size_in_sector = BLOCK_SIZE - index_in_sector;
         // 本次实际写入的大小
         int32_t write_size_in_once = MIN(free_size_in_sector, next_count);
-        printf("debug file_write i_size:%d \n", p_file->p_fd_inode->i_size);
+        // printf("debug file_write i_size:%d \n", p_file->p_fd_inode->i_size);
         // 存在的会就是读取，不存在的会先分配然后返回
         int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
         if (block_lba == -1) {
@@ -189,7 +190,7 @@ int32_t file_read_book_version(struct File *p_file, void *data, size_t count) {
     assert(p_file && data && count);
     // 修正下，如果剩下的可读取的数据量少，以少的为准
     count = MIN(count, (p_file->p_fd_inode->i_size - p_file->fd_pos));
-    printf("debug file_read i_size:%d fd_pos:%d count:%d\n",p_file->p_fd_inode->i_size, p_file->fd_pos, count);
+    //printf("debug file_read i_size:%d fd_pos:%d count:%d\n",p_file->p_fd_inode->i_size, p_file->fd_pos, count);
     if (count == 0) {
         // 没有东西可以读了，返回-1
         printf("file_read no data could read \n");
@@ -221,7 +222,7 @@ int32_t file_read_book_version(struct File *p_file, void *data, size_t count) {
        
         // 是读取，基本上是一定会有的，而不是走内部的分配
         int32_t block_lba = alloc_inode_all_block(g_current_part, p_file->p_fd_inode, p_all_block_lba, all_block_lba_count, all_block_write_index);
-        printf("debug file_read all_block_write_index:%d index_in_sector:%d free_size_in_sector:%d read_size_in_once:%d block_lba:0x%x\n", all_block_write_index,index_in_sector, free_size_in_sector, read_size_in_once,block_lba);
+        //printf("debug file_read all_block_write_index:%d index_in_sector:%d free_size_in_sector:%d read_size_in_once:%d block_lba:0x%x\n", all_block_write_index,index_in_sector, free_size_in_sector, read_size_in_once,block_lba);
         if (block_lba == -1) {
             printf("file_read alloc_inode_all_block faild\n");
             return read_count;
@@ -256,7 +257,7 @@ int32_t file_write(struct File *p_file, void *data, size_t count) {
 }
 
 int32_t file_read(struct File *p_file, void *data, size_t count) {
-    assert(p_file && data && count);
+    assert(p_file && p_file->p_fd_inode && data && count);
     // 修正下，如果剩下的可读取的数据量少，以少的为准
     count = MIN(count, (p_file->p_fd_inode->i_size - p_file->fd_pos));
     uint32_t *p_all_block_lba = NULL;
@@ -268,4 +269,21 @@ int32_t file_read(struct File *p_file, void *data, size_t count) {
     }
     sys_free(p_all_block_lba);
     return res;
+}
+
+bool file_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
+    assert(p_dir && p_dir_entry);
+    if (p_dir_entry->f_type != FT_REGULLAR) {
+        printf("file_delete ftype is not FT_REGULLAR, faild\n");
+        return false;
+    }
+    bool res = inode_release(g_current_part, p_dir_entry->i_no);
+    if (!res) {
+        printf("file_delete inode_release faild\n");
+        return false;
+    }
+    // 理论上不应该会失败，失败了也没什么办法回滚，就这样吧，直接断言一定成功
+    res = delete_dir_entry(g_current_part, p_dir, p_dir_entry, buff);
+    assert(res);
+    return true;
 }

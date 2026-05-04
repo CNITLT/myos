@@ -127,9 +127,17 @@ int32_t sys_read(int32_t fd, void *data, size_t count);
 int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence);
 
 /*
+ * @brief 删除非目录类型的文件
+ * @param path: const char *: 文件路径
+ * @return 成功返回0， 否则-1
+*/
+int32_t sys_unlink(const char *path);
+
+/*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
  * @return 成功返回全局的文件描述符
 */
 int32_t fd_local2global(uint32_t local_fd_index);
+
 #endif              

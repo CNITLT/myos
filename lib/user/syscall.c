@@ -35,3 +35,11 @@ int32_t write(int32_t fd, const void *data, size_t count) {
 int32_t read(int32_t fd, const void *data, size_t count) {
     return syscall(SYS_READ, fd, data, count);
 }
+
+int32_t lseek(int32_t fd, int32_t offset, uint8_t whence) {
+    return syscall(SYS_LSEEK, fd, offset, whence);
+}
+
+int32_t unlink(const char *path) {
+    return syscall(SYS_UNLINK, path);
+}
