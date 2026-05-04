@@ -178,7 +178,7 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
     Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
     if (!buff) {
         printf("search_dir_entry malloc buff faild\n");
-        return -1;
+        return false;
     }
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
@@ -219,7 +219,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
     Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
     if (!buff) {
         printf("search_dir_entry malloc buff faild\n");
-        return -1;
+        return false;
     }
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
@@ -265,7 +265,7 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
     Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
     if (!buff) {
         printf("search_dir_entry malloc buff faild\n");
-        return -1;
+        return false;
     }
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
@@ -306,4 +306,28 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
     sys_free(buff);
     sys_free(p_all_block_lba);
     return write_count > 0;
+}
+
+/*
+ * @brief 删除文件对应的目录项和回收inode资源
+ * @param p_dir: struct Dir * :文件所在的目录
+ * @param p_dir_entry: struct Dir_entry *: 文件的目录项
+ * @param buff : void *: 主调函数提供的缓冲区大小，要求至少1个扇区大小
+ * @return 成功删除返回true 否则false
+*/
+static bool file_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
+    assert(p_dir && p_dir_entry);
+    if (p_dir_entry->f_type != FT_REGULLAR) {
+        printf("file_delete ftype is not FT_REGULLAR, faild\n");
+        return false;
+    }
+    bool res = inode_release(g_current_part, p_dir_entry->i_no);
+    if (!res) {
+        printf("file_delete inode_release faild\n");
+        return false;
+    }
+    // 理论上不应该会失败，失败了也没什么办法回滚，就这样吧，直接断言一定成功
+    res = delete_dir_entry(g_current_part, p_dir, p_dir_entry, buff);
+    assert(res);
+    return true;
 }

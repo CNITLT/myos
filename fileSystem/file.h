@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "inode.h"
 #include "ide.h"
+
 // 整个系统所有进程同时打开的文件描述符数最大值
 // 同文件多次打开，算不同文件描述符
 #define MAX_FD_SIZE 256
@@ -76,7 +77,6 @@ void block_bitmap_free(struct Partition *p_part, int32_t block_lba);
 */
 void bitmap_sync(struct Partition *p_part, int32_t bit_index, Bitmap_type bitmap_type);
 
-
 /*
  * @brief 打开文件，成功返回文件描述符，否则-1
  * @param inode_no : uint32_t : inode编号
@@ -92,7 +92,6 @@ int32_t file_open(uint32_t inode_no, uint8_t flag);
  * @return int32_t 成功返回0，失败-1，基本上只能是0
 */
 int32_t file_close(struct File *p_file);
-
 
 /*
  * @brief 追加写入数据到文件
@@ -111,4 +110,5 @@ int32_t file_write(struct File *p_file, void *data, size_t count);
  * @return 成功返回读取的数据量，失败返回-1
 */
 int32_t file_read(struct File *p_file, void *data, size_t count);
+
 #endif

@@ -68,10 +68,10 @@ void inode_close(struct Inode* p_inode);
 
 
 /*
-    @brief  回收inode_no所代表的资源
+    @brief 回收inode_no所代表的资源
     @param p_part : struct Partition * : 分区信息
     @param inode_no : uint32_t:  inode编号
-    @return 成功返回true否则false
+    @return 成功返回true 否则false
 */
 bool inode_release(struct Partition *p_part, uint32_t inode_no);
 
