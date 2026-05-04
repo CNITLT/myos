@@ -667,7 +667,7 @@ int32_t sys_mkdir(const char *path) {
             break;
         }
 
-        if (p_path_search_record->file_type != FT_DIRECTORY) {
+        if (p_path_search_record->file_type == FT_REGULLAR) {
             printf("sys_mkdir dir %s is file \n", path);
             break;
         }
