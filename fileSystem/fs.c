@@ -558,3 +558,31 @@ int32_t sys_read(int32_t fd, void *data, size_t count) {
     struct File* p_file = &g_file_table[global_fd_index];
     return file_read(p_file, data, count);
 }
+
+int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence) {
+    if (fd < 0) {
+        printf("sys_lseek fd error less than 0\n");
+        return -1;
+    }
+    assert(whence >= 1 && whence <=3);
+    uint32_t global_fd = fd_local2global(fd);
+    struct File* p_file = g_file_table + global_fd;
+    int32_t new_pos = 0;
+    int32_t file_size = (int32_t) p_file->p_fd_inode->i_size;
+    switch (whence)
+    {
+    case SEEK_SET:
+        new_pos = offset;
+        break;
+    case SEEK_CUR:
+        new_pos = (int32_t)p_file->fd_pos + offset;
+    case SEEK_END:
+        new_pos = file_size + offset;
+    default:
+        break;
+    }
+    new_pos = MAX(0, new_pos);
+    new_pos = MIN(file_size, new_pos);
+    p_file->fd_pos = new_pos;
+    return p_file->fd_pos;
+}

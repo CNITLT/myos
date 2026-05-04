@@ -24,6 +24,12 @@ typedef enum oflags {
     O_CREAT = 4 // 创建
 } oflags;
 
+typedef enum Whence {
+    SEEK_SET = 1, // 开头
+    SEEK_CUR, // 当前位置
+    SEEK_END //结尾
+} Whence;
+
 struct Path_search_record {
     char searched_path[MAX_PATH_LENGTH]; // 查找过程中的父路径，主要是在断链没找到的情况下有用
     struct Dir* p_parent_dir; //文件或目录所在的直接父目录, 由调用函数记得释放, 被掉函数打开
@@ -110,6 +116,16 @@ int32_t sys_write(int32_t fd, const void *data, size_t count);
  * @return 成功返回读取的数据量，失败返回-1
 */
 int32_t sys_read(int32_t fd, void *data, size_t count);
+
+/*
+ * @brief 调整文件描述符里的游标
+ * @param fd: int32_t :待读取的文件描述符索引
+ * @param offset: int32_t : 偏移量
+ * @param whence: uint8_t : 枚举值，偏移的起点
+ * @return int32_t 新的游标位置, 失败返回-1
+*/
+int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence);
+
 /*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
