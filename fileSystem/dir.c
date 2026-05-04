@@ -175,10 +175,16 @@ bool sync_dir_entry_book_version(struct Partition* p_part, struct Dir* p_dir, st
 // 自己的魔改版本，目录项可跨扇区，紧凑版本
 bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_name, struct Dir_entry* p_dir_entry) {  
     assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("search_dir_entry malloc buff faild\n");
+        return -1;
+    }
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
     get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
-    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+ 
+   
     const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
     const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
     
@@ -210,10 +216,14 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
 // 自己的魔改版本，目录项可跨扇区，紧凑版本
 bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entry *p_dir_entry, void *io_buff) {
     assert(sizeof(struct Dir_entry) <= BLOCK_SIZE);
+    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
+    if (!buff) {
+        printf("search_dir_entry malloc buff faild\n");
+        return -1;
+    }
     uint32_t all_block_count;
     uint32_t *p_all_block_lba;
     get_dir_all_block_lba(p_part, p_dir, &p_all_block_lba, &all_block_count);
-    Byte *buff = (Byte *)sys_malloc(BLOCK_SIZE);
     const int32_t entry_count_in_block = BLOCK_SIZE / sizeof(struct Dir_entry);
     const int32_t max_used_read_size_in_once = entry_count_in_block * sizeof(struct Dir_entry);
     
@@ -238,9 +248,13 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
     if (empty_dir_entry_pos == -1) {
         empty_dir_entry_pos = p_dir->p_inode->i_size;
     }
-    int write_res = write_data_to_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, empty_dir_entry_pos, p_dir_entry, sizeof(struct Dir_entry));
-    
+    int write_count = write_data_to_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, empty_dir_entry_pos, p_dir_entry, sizeof(struct Dir_entry));
     sys_free(buff);
     sys_free(p_all_block_lba);
-    return write_res > 0;
+    if (write_count > 0 && empty_dir_entry_pos == p_dir->p_inode->i_size) { 
+        //同步到磁盘
+        p_dir->p_inode->i_size += write_count;
+        inode_sync(p_part, p_dir->p_inode, NULL);
+    }
+    return write_count > 0;
 }
