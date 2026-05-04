@@ -22,6 +22,7 @@ extern struct Dir g_root_dir;
 // 单个扇区最后一些位置存不下一个项目的话就新开一个扇区存, 操作起来方便一些
 struct Dir_entry {
     char fileName[MAX_FILE_NAME_LENGTH]; // 文件名
+    uint8_t fileNameEnd; // 恒为0，用于文件名的结尾
     uint32_t i_no; // inode节点编号
     File_types f_type;
     uint32_t magic; // 魔改后带一个魔数
