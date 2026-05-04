@@ -95,7 +95,15 @@ void get_inode_all_block_lba(struct Partition* p_part, struct Inode *p_inode, ui
 */
 int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
 
-
-
+/*
+   @brief 释放inode的一个block, 释放成功会同步到p_all_block_lba内，及inode，磁盘等相关信息, 对于1级块，若1级块内无直接块则对应释放1级块
+   @param p_part: struct Partition *: 分区信息
+   @param p_inode:  struct Inode * :搜寻的inode节点
+   @param p_all_block_lba_ret: uint32_t *: 存储函数分配的所有block lba地址的数组地址的指针地址
+   @param p_all_block_lba_count_ret: uint32_t : all_block_lba数组元素个数
+   @param all_block_index: int32_t : 在所有块内的索引
+   @return int32_t: 释放成功返回0， 否则-1， 若本身给出的块不存在，同时视为释放成功
+*/
+int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index);
 
 #endif

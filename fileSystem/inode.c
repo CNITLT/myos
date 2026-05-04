@@ -225,6 +225,7 @@ static int32_t alloc_inode_layer0_block(struct Partition* p_part, struct Inode *
 
 // 分配1级块, 若i_sector内的一级块没有分配，也会同时分配
 static int32_t alloc_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+    assert(all_block_index >= I_NODE_LAYER0_BLCOK_SIZE);
     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
     int32_t layer1_block_lba = p_inode->i_sectors[i_sector_index];
     if (layer1_block_lba == 0) {
@@ -283,4 +284,81 @@ int32_t alloc_inode_all_block(struct Partition* p_part, struct Inode *p_inode, u
         return alloc_inode_layer1_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
      }
 }
-    
+
+
+/*
+  @brief 释放直接块或者1级块，即对i_sector分配块
+  @param p_part: struct Partition* :操作扇区
+  @param p_inode: struct Inode * :inode节点
+  @param i_sector_index: int32_t :待释放的i_sector索引
+  @return 只会返回成功0
+ */
+static int32_t free_inode_sector_block(struct Partition* p_part, struct Inode *p_inode,  int32_t i_sector_index) {
+    assert(i_sector_index < I_NODE_SECTOR_SIZE);
+    // 块不存在直接当释放了
+    if (p_inode->i_sectors[i_sector_index] == 0) {
+        return 0;
+    }
+    int32_t block_lba = p_inode->i_sectors[i_sector_index];
+    block_bitmap_free(p_part, block_lba);
+    // 然后同步磁盘
+    int32_t block_bitmap_index = block_lba - p_part->super_block->data_area_lba_base;
+    assert(block_bitmap_index != -1);
+    bitmap_sync(p_part, block_bitmap_index, Bitmap_type_block);
+    p_inode->i_sectors[i_sector_index] = 0;
+    // 同步inode
+    inode_sync(p_part, p_inode, NULL);
+    return 0;
+}
+
+
+// 释放直接块
+static int32_t free_inode_layer0_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+    assert(all_block_index < I_NODE_LAYER0_BLCOK_SIZE);
+    int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+    int res = free_inode_sector_block(p_part, p_inode, i_sector_index);
+    p_all_block_lba[all_block_index] = 0;
+    return res;
+}
+
+// 释放1级块, 一级块内没有直接块指向，则释放一级块, 若块本身没有被分配，则认为释放成功
+static int32_t free_inode_layer1_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+    assert(all_block_index >= I_NODE_LAYER0_BLCOK_SIZE);
+    int32_t block_lba = p_all_block_lba[all_block_index];
+    if (block_lba == 0) {
+        return 0;
+    }
+    // 先释放直接块
+    block_bitmap_free(p_part, block_lba);
+    // 然后同步磁盘
+    int32_t block_bitmap_index = block_lba - p_part->super_block->data_area_lba_base;
+    assert(block_bitmap_index != -1);
+    bitmap_sync(p_part, block_bitmap_index, Bitmap_type_block);
+    p_all_block_lba[all_block_index] = 0;
+    // 再检查下一级块内有无其他直接块
+    bool has_other_block = false;
+    int32_t start_block_index = I_NODE_LAYER0_BLCOK_SIZE + (all_block_index2_i_sector_index(all_block_index) - I_NODE_LAYER0_BLCOK_SIZE) * I_NODE_LAYER0_SIZE_PER_LAYER1;
+    for (int i = start_block_index; i < start_block_index + I_NODE_LAYER0_SIZE_PER_LAYER1; i++) {
+        if (p_all_block_lba[i] != 0) {
+            has_other_block = true;
+            break;
+        }
+    }
+
+    if (!has_other_block) {
+        // 如果没有其他直接块的话，同时把i_sector里的也释放了
+        int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+        free_inode_sector_block(p_part, p_inode, i_sector_index);
+    }
+    return 0;
+}
+
+
+int32_t free_inode_all_block(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t p_all_block_lba_count, int32_t all_block_index) {
+     int32_t i_sector_index = all_block_index2_i_sector_index(all_block_index);
+     if (i_sector_index < I_NODE_LAYER0_BLCOK_SIZE) {
+        return free_inode_layer0_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+     } else {
+        return free_inode_layer1_block(p_part, p_inode, p_all_block_lba, p_all_block_lba_count, all_block_index);
+     }
+}
