@@ -198,7 +198,6 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
         if (read_count == -1 || read_count == 0) {
             break;
         }
-        pos += read_count;
         // 开始遍历目录项
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -212,6 +211,7 @@ bool search_dir_entry(struct Partition* p_part, struct Dir *p_dir, char *entry_n
             }
             p_dir_entry_iter++;
         }
+        pos += read_count;
     }
     sys_free(buff);
     sys_free(p_all_block_lba);
@@ -239,7 +239,6 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
         if (read_count == -1 || read_count == 0) {
             break;
         }
-        pos += read_count;
         // 开始遍历目录项，查找空洞位置
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -249,6 +248,7 @@ bool sync_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_entr
             }
             p_dir_entry_iter++;
         }
+        pos += read_count;
     }
     if (empty_dir_entry_pos == -1) {
         empty_dir_entry_pos = p_dir->p_inode->i_size;
@@ -285,7 +285,6 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
         if (read_count == -1 || read_count == 0) {
             break;
         }
-        pos += read_count;
         // 开始遍历目录项，查找空洞位置
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
@@ -294,11 +293,12 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
                 continue;
             }
             if (!strcmp(p_dir_entry_iter->fileName, p_dir_entry->fileName) && p_dir_entry_iter->i_no == p_dir_entry->i_no) {
-                delete_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff) - read_count;
+                delete_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff);
                 break;
             }
             p_dir_entry_iter++;
         }
+        pos += read_count;
     }
 
     int write_count = -1;
