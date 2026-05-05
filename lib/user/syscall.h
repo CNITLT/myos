@@ -5,7 +5,7 @@
 #include "syscall_init.h"
 struct Dir;
 struct Dir_entry;
-
+struct Stat;
 enum SYSCALL_NR {
     SYS_GETPID = 0,
     SYS_MALLOC,
@@ -21,6 +21,7 @@ enum SYSCALL_NR {
     SYS_RMDIR,
     SYS_GETCWD,
     SYS_CHDIR,
+    SYS_STAT,
  };
 /*
 @brief 用户态的系统调用入口
@@ -137,4 +138,12 @@ char * getcwd(char *buff, size_t size);
  * @return 成功0，否则-1
 */
 int32_t chdir(const char *path);
+
+/*
+ * @brief 获取绝对路径下的文件信息
+ * @param path: const char *: 文件或目录的绝对路径
+ * @param p_stat: struct Stat *: 文件结构信息，非空
+ * @return 成功0，否则-1
+*/
+int32_t stat(const char *path, struct Stat *p_stat);
 #endif

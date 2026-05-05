@@ -77,3 +77,7 @@ char * getcwd(char *buff, size_t size) {
 int32_t chdir(const char *path) {
     return syscall(SYS_CHDIR, path);
 }
+
+int32_t stat(const char *path, struct Stat *p_stat) {
+    return syscall(SYS_STAT, path, p_stat);
+}

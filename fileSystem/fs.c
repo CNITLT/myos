@@ -963,3 +963,34 @@ int32_t sys_chdir(const char *path) {
     dir_close(p_dir);
     return 0;
 }
+
+int32_t sys_stat(const char *path, struct Stat *p_stat) {
+    assert(p_stat);
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    memset(p_path_search_record, 0, sizeof(struct Path_search_record));
+    int inode_no = search_file(path, p_path_search_record);
+    bool has_parent_dir = (path_depth(path) == path_depth(p_path_search_record->searched_path));
+    bool is_found = has_parent_dir && inode_no != -1;
+    int res = -1;
+    do {
+        if (!is_found) {
+            printf("%s path:%s is not found\n",path);
+            break;
+        }
+
+        struct Inode *p_inode = inode_open(g_current_part, inode_no);
+        if (!p_inode) {
+            printf("%s open inode_no:%d faild\n", inode_no);
+            break;
+        }
+        p_stat->st_file_type = p_path_search_record->file_type;
+        p_stat->st_inode_no = inode_no;
+        p_stat->st_size = p_inode->i_size;
+        inode_close(p_inode);
+        res = 0;
+    }while(0);
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
+    return res;
+}

@@ -297,6 +297,9 @@ void main_thread_func(void *args){
             //int32_t res = sys_rmdir(path);
             //printf("sys_rmdir:%s res:%d\n",path, res);
         }
+        struct Stat stat_data = {0};
+        int res = stat(path, &stat_data);
+        printf("path:%s stat res:%d inode_no:%d file_type:%d size:%d\n", path, res, stat_data.st_inode_no, stat_data.st_file_type, stat_data.st_size);
     }
 
     

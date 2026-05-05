@@ -30,6 +30,7 @@ void syscall_init(){
     syscall_table[SYS_RMDIR] = sys_rmdir;
     syscall_table[SYS_GETCWD] = sys_getcwd;
     syscall_table[SYS_CHDIR] = sys_chdir;
+    syscall_table[SYS_STAT] = sys_stat;
 }
 
 pid_t sys_getpid(void){

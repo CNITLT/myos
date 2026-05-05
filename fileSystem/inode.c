@@ -113,6 +113,9 @@ struct Inode* inode_open(struct Partition *p_part, uint32_t inode_no) {
 }
 
 void inode_close(struct Inode* p_inode) {
+    if (!p_inode) {
+        return;
+    }
     interrupt_state old_intr_state = close_interrupt();
     p_inode->i_open_cnts--;
     if (p_inode->i_open_cnts == 0) {
@@ -465,7 +468,7 @@ int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, ui
 int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
     // printf("debug write_data_to_inode p_part:0x%x p_inode:0x%x data:0x%x\n", p_part, p_inode, data);
     assert(p_part && p_inode && data);
-    
+
     if (pos < 0 || pos > p_inode->i_size) {
         printf("write_data_to_inode pos:%d i_size:%d is invaild\n", pos, p_inode->i_size);
         return -1;

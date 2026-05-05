@@ -30,6 +30,12 @@ typedef enum Whence {
     SEEK_END //结尾
 } Whence;
 
+struct Stat {
+    uint32_t st_inode_no;   // inode编号
+    uint32_t st_size;       // 文件大小
+    File_types st_file_type; // 文件类型
+};
+
 struct Path_search_record {
     char searched_path[MAX_PATH_LENGTH]; // 查找过程中的父路径，主要是在断链没找到的情况下有用
     struct Dir* p_parent_dir; //文件或目录所在的直接父目录, 由调用函数记得释放, 被掉函数打开
@@ -195,4 +201,12 @@ char *sys_getcwd(char *buff, size_t size);
  * @return 成功0，否则-1
 */
 int32_t sys_chdir(const char *path);
+
+/*
+ * @brief 获取绝对路径下的文件信息
+ * @param path: const char *: 文件或目录的绝对路径
+ * @param p_stat: struct Stat *: 文件结构信息，非空
+ * @return 成功0，否则-1
+*/
+int32_t sys_stat(const char *path, struct Stat *p_stat);
 #endif              
