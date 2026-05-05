@@ -883,9 +883,12 @@ static int32_t get_child_dir_name(uint32_t parent_dir_no, uint32_t child_dir_no,
 }
 
 char *sys_getcwd(char *buff, size_t size) {
+    const bool enable_debug = false;
     struct task_struct *pcb = get_current_pcb();
     uint32_t inode_no = pcb->current_workdir_inode_no;
-    
+    if (enable_debug) {
+        printf("debug %s start current inode_no:%d\n", __FILE__, inode_no);   
+    }
     bool inner_malloc = false;
     if (!buff) {
         inner_malloc = true;
@@ -899,12 +902,13 @@ char *sys_getcwd(char *buff, size_t size) {
         return buff;
     }
     // 下面是保底进入了一层其他目录
-    uint32_t parent_inode_no;
+    uint32_t parent_inode_no = get_parent_inode_no(inode_no);
     char *next = buff;
-    while(parent_inode_no = get_parent_inode_no(inode_no)) {
-        if (parent_inode_no == inode_no) {
-            break;
+    while(parent_inode_no != inode_no) {
+        if (enable_debug) {
+            printf("debug %s parent inode_no:%d child inode_no:%d\n",__FILE__, parent_inode_no, inode_no);
         }
+        
         *next = '/';
         next++;
         int child_len = get_child_dir_name(parent_inode_no, inode_no, next);
@@ -919,7 +923,7 @@ char *sys_getcwd(char *buff, size_t size) {
         inode_no = parent_inode_no;
     }
     int len = strlen(buff);
-    assert(len < MAX_PATH_LENGTH);
+    assert(len < MAX_PATH_LENGTH && len > 0);
     // 这里的话，buff里面是反着的，需要摆弄正 如果正确的顺序是/a/b/c, 此时里面是/c/b/a
     char * temp_buff = malloc(MAX_PATH_LENGTH);
     if (!temp_buff) {
@@ -946,4 +950,16 @@ char *sys_getcwd(char *buff, size_t size) {
     memcpy(buff, temp_buff, len);
     free(temp_buff);
     return buff;
+}
+
+int32_t sys_chdir(const char *path) {
+    struct Dir *p_dir = sys_opendir(path);
+    if (!p_dir) {
+        printf("%s sys_opendir %s faild\n", __FILE__, path);
+        return -1;
+    }
+    struct task_struct *pcb = get_current_pcb();
+    pcb->current_workdir_inode_no = p_dir->p_inode->i_no;
+    dir_close(p_dir);
+    return 0;
 }

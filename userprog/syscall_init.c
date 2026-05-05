@@ -28,7 +28,8 @@ void syscall_init(){
     syscall_table[SYS_READDIR] = sys_readdir;
     syscall_table[SYS_REWINDDIR] = sys_rewinddir;
     syscall_table[SYS_RMDIR] = sys_rmdir;
-
+    syscall_table[SYS_GETCWD] = sys_getcwd;
+    syscall_table[SYS_CHDIR] = sys_chdir;
 }
 
 pid_t sys_getpid(void){

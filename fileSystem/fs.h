@@ -188,4 +188,11 @@ int32_t fd_local2global(uint32_t local_fd_index);
  * @return char *, 若buff不为null，则返回buff, 若buff为null，则内部动态分配，外部释放
 */
 char *sys_getcwd(char *buff, size_t size);
+
+/*
+ * @brief 切换当前工作路径
+ * @param path: char *path: 绝对路径
+ * @return 成功0，否则-1
+*/
+int32_t sys_chdir(const char *path);
 #endif              

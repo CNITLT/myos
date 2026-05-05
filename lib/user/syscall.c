@@ -63,3 +63,17 @@ void rewinddir(struct Dir *p_dir) {
 int32_t rmdir(const char *path) {
     return syscall(SYS_RMDIR, path);
 }
+
+
+char * getcwd(char *buff, size_t size) {
+    return syscall(SYS_GETCWD, buff, size);
+}
+
+/*
+ * @brief 切换当前工作路径
+ * @param path: char *path: 绝对路径
+ * @return 成功0，否则-1
+*/
+int32_t chdir(const char *path) {
+    return syscall(SYS_CHDIR, path);
+}

@@ -19,6 +19,8 @@ enum SYSCALL_NR {
     SYS_READDIR,
     SYS_REWINDDIR,
     SYS_RMDIR,
+    SYS_GETCWD,
+    SYS_CHDIR,
  };
 /*
 @brief 用户态的系统调用入口
@@ -120,4 +122,19 @@ void rewinddir(struct Dir *p_dir);
     @return 成功0， 失败-1
 */
 int32_t rmdir(const char *path);
+
+/*
+ * @brief 获取当前工作路径
+ * @param buff: char *: 若不为null，则会将当前路径写入该buff内
+ * @param size: size_t :缓存区大小
+ * @return char *, 若buff不为null，则返回buff, 若buff为null，则内部动态分配，外部释放
+*/
+char * getcwd(char *buff, size_t size);
+
+/*
+ * @brief 切换当前工作路径
+ * @param path: char *path: 绝对路径
+ * @return 成功0，否则-1
+*/
+int32_t chdir(const char *path);
 #endif

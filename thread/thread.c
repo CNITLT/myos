@@ -294,11 +294,23 @@ void main_thread_func(void *args){
             int32_t res = sys_mkdir(path);
             printf("sys_mkdir:%s res:%d\n",path, res);
         } else {
-            int32_t res = sys_rmdir(path);
-            printf("sys_rmdir:%s res:%d\n",path, res);
+            //int32_t res = sys_rmdir(path);
+            //printf("sys_rmdir:%s res:%d\n",path, res);
         }
     }
 
+    
+    char *buff = malloc(MAX_PATH_LENGTH);
+    assert(buff);
+    getcwd(buff, MAX_PATH_LENGTH);
+    printf("getcwd:%s\n", buff);
+
+    printf("chdir /b :%d\n",chdir("/b"));
+    char *res = getcwd(buff, MAX_PATH_LENGTH);
+    printf("getcwd:0x%x %s res:0x%x %s\n",buff, buff,res, res);
+
+    free(buff);
+    
     // int res = sys_mkdir("/a");
     // printf("call sys_mkdir res:%d\n", res);
     // char *fileName = "/e2.txt";
