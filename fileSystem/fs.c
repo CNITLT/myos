@@ -64,7 +64,7 @@ void partition_format(struct Partition *part) {
     p_super_block->inode_table_size_sector = inode_table_sectors; // inode表大小
 
     p_super_block->data_area_lba_base = p_super_block->inode_table_lba + p_super_block->inode_table_size_sector; // 数据块起点
-    p_super_block->root_inode_no = 0; 
+    p_super_block->root_inode_no = ROOT_INODE_NO; 
     p_super_block->dir_entry_size = sizeof(struct Dir_entry);
 // --- debug ----
     printf("super_block size_sector:%d\n", p_super_block->size_sector);
@@ -835,4 +835,115 @@ int32_t sys_rmdir(const char *path) {
     dir_close(p_path_search_record->p_parent_dir);
     sys_free(p_path_search_record);
     return res;
+}
+
+/*
+ * @brief 给定一个目录inode号，返回其父目录编号
+ * @param inode_no: uint32_t: 待查找的目录inode_no号
+ * @return uint32_t 父目录inode_no号, 返回结果与inode_no一样说明已经是父目录了
+*/
+static uint32_t get_parent_inode_no(uint32_t inode_no) {
+    // 是根目录就直接返回
+    if (inode_no == g_current_part->super_block->root_inode_no) {
+        return inode_no;
+    }
+    struct Dir * p_dir = dir_open(g_current_part, inode_no);
+    struct Dir_entry *p_dir_entry = dir_read(p_dir);
+    // 第二个就是父目录
+    p_dir_entry = dir_read(p_dir);
+    uint32_t parent_inode_no = p_dir_entry->i_no;
+    dir_close(p_dir);
+    return parent_inode_no;
+}
+
+/*
+ * @brief 获取子目录名字并存入buff内
+ * @param parent_dir_no : uint32_t : 父目录inode编号
+ * @param child_dir_no: uint32_t :子目录编号
+ * @return 成功返回名字长度，否则-1
+*/
+static int32_t get_child_dir_name(uint32_t parent_dir_no, uint32_t child_dir_no, char *buff) {
+    assert(buff);
+    struct Dir *p_parent_dir = dir_open(g_current_part, parent_dir_no);
+    if (!p_parent_dir) {
+        printf("%s open parent dir inode_no:%d faild\n", __FILE__, parent_dir_no);
+        return -1;
+    }
+    int res = -1;
+    struct Dir_entry *p_dir_entry = NULL;
+    while(p_dir_entry = dir_read(p_parent_dir)) {
+        if (p_dir_entry->i_no == child_dir_no && p_dir_entry->magic == DIR_ENTRY_MAGIC && p_dir_entry->f_type == FT_DIRECTORY) {
+            res = strlen(p_dir_entry->fileName);
+            memcpy(buff, p_dir_entry->fileName, res);
+            break;
+        }
+    }
+    dir_close(p_parent_dir);
+    return res;
+}
+
+char *sys_getcwd(char *buff, size_t size) {
+    struct task_struct *pcb = get_current_pcb();
+    uint32_t inode_no = pcb->current_workdir_inode_no;
+    
+    bool inner_malloc = false;
+    if (!buff) {
+        inner_malloc = true;
+        buff = malloc(MAX_PATH_LENGTH);
+        size = MAX_PATH_LENGTH;
+    }
+    memset(buff, 0, size);
+    // 一开始是根目录的话直接返回一个/
+    if (inode_no == g_current_part->super_block->root_inode_no) {
+        buff[0] = '/';
+        return buff;
+    }
+    // 下面是保底进入了一层其他目录
+    uint32_t parent_inode_no;
+    char *next = buff;
+    while(parent_inode_no = get_parent_inode_no(inode_no)) {
+        if (parent_inode_no == inode_no) {
+            break;
+        }
+        *next = '/';
+        next++;
+        int child_len = get_child_dir_name(parent_inode_no, inode_no, next);
+        if (child_len == -1) {
+            printf("%s get_child_dir_name parent inode_no:%d child inode_no:%d faild\n", __FILE__, parent_inode_no, inode_no);
+            if(inner_malloc) {
+                free(buff);
+            }
+            return NULL;
+        }
+        next += child_len;
+        inode_no = parent_inode_no;
+    }
+    int len = strlen(buff);
+    assert(len < MAX_PATH_LENGTH);
+    // 这里的话，buff里面是反着的，需要摆弄正 如果正确的顺序是/a/b/c, 此时里面是/c/b/a
+    char * temp_buff = malloc(MAX_PATH_LENGTH);
+    if (!temp_buff) {
+        printf("%s malloc temp_buff faild\n", __FILE__);
+        if(inner_malloc) {
+            free(buff);
+        }
+        return NULL;
+    }
+    memset(temp_buff, 0, MAX_PATH_LENGTH);
+    // 此时指向末尾
+    next = buff + len;
+    char *t_next = temp_buff;
+    while(next != buff) {
+        int part_len = 0;
+        while(*(--next) != '/') {
+            part_len++;
+        }
+        // 复制到temp_buff里
+        *t_next = '/';
+        t_next++;
+        memcpy(t_next, next + 1, part_len);
+    }
+    memcpy(buff, temp_buff, len);
+    free(temp_buff);
+    return buff;
 }

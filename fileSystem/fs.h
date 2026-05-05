@@ -7,7 +7,7 @@
 // 每扇区的位数
 #define BITS_PER_SECTOR (SECTOR_SIZE_BYTE*8)  
 #define BLOCK_SIZE SECTOR_SIZE_BYTE
-
+#define ROOT_INODE_NO 0
 
 extern struct Partition *g_current_part; 
 
@@ -181,4 +181,11 @@ int32_t sys_rmdir(const char *path);
 */
 int32_t fd_local2global(uint32_t local_fd_index);
 
+/*
+ * @brief 获取当前工作路径
+ * @param buff: char *: 若不为null，则会将当前路径写入该buff内
+ * @param size: size_t :缓存区大小
+ * @return char *, 若buff不为null，则返回buff, 若buff为null，则内部动态分配，外部释放
+*/
+char *sys_getcwd(char *buff, size_t size);
 #endif              

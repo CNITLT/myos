@@ -77,8 +77,8 @@ void thread_create(struct task_struct* pcb, thread_func function, void* func_arg
     stack->ebx = 0;
     stack->esi = 0;
     stack->edi = 0;
-    
 }
+
 void init_pcb(struct task_struct* pcb, char* name, int priority){
     memset(pcb, 0, sizeof(struct task_struct));
     memcpy(pcb->name, name, strlen(name));
@@ -101,7 +101,7 @@ void init_pcb(struct task_struct* pcb, char* name, int priority){
     for (int i = 0; i < MAX_FILES_OPEN_PER_PROC; i++) {
         pcb->fd_table[i] = i < 3 ? i : -1;
     }
-
+    pcb->current_workdir_inode_no = 0; //默认根目录
     pcb->stack_magic = STACK_OVERFLOW_MAGIC_NUM;
 }
 
