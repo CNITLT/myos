@@ -290,6 +290,7 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
             // 目录空洞先跳过
            if (p_dir_entry_iter->f_type == FT_UNKNOWN || p_dir_entry_iter->magic != DIR_ENTRY_MAGIC) {
+                p_dir_entry_iter++;
                 continue;
             }
             if (!strcmp(p_dir_entry_iter->fileName, p_dir_entry->fileName) && p_dir_entry_iter->i_no == p_dir_entry->i_no) {
@@ -426,6 +427,11 @@ bool dir_is_empty(struct Dir *p_dir) {
 
 bool dir_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
     assert(p_dir && p_dir_entry);
+    const bool enable_debug = false;
+    if (enable_debug) {
+        printf("%s start p_dir i_no:%d, delete:%s %d\n",__FILE__, p_dir->p_inode->i_no,p_dir_entry->fileName, p_dir_entry->i_no);
+    }
+
     if (p_dir_entry->f_type != FT_DIRECTORY) {
         printf("dir_delete ftype is not FT_DIRECTORY, faild\n");
         return false;
@@ -437,14 +443,22 @@ bool dir_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
         return false;
     }
     dir_close(p_delete_dir);
-
+    if (enable_debug) {
+        printf("%s will inode_release dir_entry:%s %d\n", __FILE__, p_dir_entry->fileName, p_dir_entry->i_no);
+    }
     bool res = inode_release(g_current_part, p_dir_entry->i_no);
     if (!res) {
         printf("dir_delete inode_release faild\n");
         return false;
     }
+    if (enable_debug) {
+        printf("%s will delete_dir_entry dir_entry:%s %d\n",__FILE__, p_dir_entry->fileName, p_dir_entry->i_no);
+    }
     // 理论上不应该会失败，失败了也没什么办法回滚，就这样吧，直接断言一定成功
     res = delete_dir_entry(g_current_part, p_dir, p_dir_entry, buff);
     assert(res);
+    if (enable_debug) {
+        printf("%s end success p_dir i_no:%d, delete:%s %d\n",__FILE__, p_dir->p_inode->i_no,p_dir_entry->fileName, p_dir_entry->i_no);
+    }
     return true;
 }
