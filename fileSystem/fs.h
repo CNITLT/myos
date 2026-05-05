@@ -168,6 +168,13 @@ struct Dir_entry * sys_readdir(struct Dir *p_dir);
 void sys_rewinddir(struct Dir *p_dir);
 
 /*
+    @brief 删除空目录，对有内容的目录无法删除
+    @param path: const char *: 目录路径
+    @return 成功0， 失败-1
+*/
+int32_t sys_rmdir(const char *path);
+
+/*
  * @brief 当前进程文件描述符转化为全局文件描述符
  * @param local_fd_index: uin32_t : 当前进程的一个文件描述符
  * @return 成功返回全局的文件描述符

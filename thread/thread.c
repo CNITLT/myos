@@ -281,10 +281,23 @@ void main_thread_func(void *args){
     // 其他测试逻辑
     struct Dir *p_dir = sys_opendir("/");
     struct Dir_entry *p_dir_entry;
+    int count = 0;
     while(p_dir_entry = readdir(p_dir)) {
-        printf("readdir p_dir_entry:0x%x name:%s\n", p_dir_entry, p_dir_entry->fileName);
+        count++;
+        printf("readdir p_dir_entry:0x%x name:%s type:%d \n", p_dir_entry, p_dir_entry->fileName, p_dir_entry->f_type);
     }
-
+  
+    for (int i = 0; i < 5; i++) {
+        char path[10] = {'/', 'a', 0};
+        path[1] += i;
+        if (count <= 2) {
+            int32_t res = sys_mkdir(path);
+            printf("sys_mkdir:%s res:%d\n",path, res);
+        } else {
+            int32_t res = sys_rmdir(path);
+            printf("sys_rmdir:%s res:%d\n",path, res);
+        }
+    }
 
     // int res = sys_mkdir("/a");
     // printf("call sys_mkdir res:%d\n", res);

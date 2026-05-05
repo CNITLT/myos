@@ -294,7 +294,7 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
                 continue;
             }
             if (!strcmp(p_dir_entry_iter->fileName, p_dir_entry->fileName) && p_dir_entry_iter->i_no == p_dir_entry->i_no) {
-                delete_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff);
+                delete_dir_entry_pos = pos + ((uint32_t)p_dir_entry_iter - (uint32_t)buff) - read_count;
                 break;
             }
             p_dir_entry_iter++;
@@ -315,21 +315,40 @@ bool delete_dir_entry(struct Partition* p_part, struct Dir* p_dir, struct Dir_en
 }
 
 struct Dir_entry * dir_read(struct Dir *p_dir) {
+    const bool enable_debug = false;
     if (!p_dir) {
+        if (enable_debug) {
+            printf("debug %s p_dir is NULL return NULL\n", __FILE__);
+        }
         return NULL;
     }
 
     // 这种情况是读取完后的
     if (p_dir->p_dir_entry == NULL && p_dir->dir_pos != 0) {
+        if (enable_debug) {
+            printf("debug %s p_dir is read complete, dir_pos:%d return NULL\n", __FILE__, p_dir->dir_pos);
+        }
         return NULL;
     }
     // 先从缓存内读取
     if (p_dir->p_dir_entry != NULL) {
         p_dir->p_dir_entry++;
         while((uint32_t)p_dir->p_dir_entry < (uint32_t)p_dir->dir_buff + DIR_CACHE_SIZE) {
-            if (p_dir->p_dir_entry->f_type != FT_UNKNOWN && p_dir->p_dir_entry->magic == DIR_ENTRY_MAGIC) {
+            bool is_vaild_entry = p_dir->p_dir_entry->f_type != FT_UNKNOWN && p_dir->p_dir_entry->magic == DIR_ENTRY_MAGIC;
+            if (enable_debug && is_vaild_entry) {
+                printf("debug %s p_dir is read cache, item fileName:%s i_no:%d type:%d magic:%d vaild:%d\n", 
+                    __FILE__, 
+                    p_dir->p_dir_entry->fileName, 
+                    p_dir->p_dir_entry->i_no, 
+                    p_dir->p_dir_entry->f_type, 
+                    p_dir->p_dir_entry->magic,
+                    is_vaild_entry);
+            }
+            
+            if (is_vaild_entry) {
                 return p_dir->p_dir_entry;
             }
+            p_dir->p_dir_entry++;
         }
     }
     // 这种情况下，说明缓存里的都是无效的, 从磁盘里读
@@ -345,7 +364,11 @@ struct Dir_entry * dir_read(struct Dir *p_dir) {
      
     while(p_dir->dir_pos < p_dir->p_inode->i_size) {
         int32_t read_count = read_data_from_inode(p_part, p_dir->p_inode, p_all_block_lba, all_block_count, p_dir->dir_pos, buff, max_used_read_size_in_once);
-        // printf("debug seach_dir_entry read p_part:0x%x dir_inode:0x%x pos:%d max_read:%d res:%d\n",p_part, p_dir->p_inode, pos, max_used_read_size_in_once, read_count);
+        if(enable_debug) {
+            printf("debug %s p_dir is read disk,i_size:%d dir_pos:%d max_used_read_size_in_once:%d read_count:%d\n", 
+                __FILE__,p_dir->p_inode->i_size, p_dir->dir_pos, max_used_read_size_in_once, read_count);
+        }
+
         if (read_count == -1 || read_count == 0) {
             break;
         }
@@ -353,7 +376,15 @@ struct Dir_entry * dir_read(struct Dir *p_dir) {
         // 开始遍历目录项
         struct Dir_entry *p_dir_entry_iter = (struct Dir_entry *)buff;
         while((uint32_t)p_dir_entry_iter < ((uint32_t)buff + read_count)) {
-           // printf("debug seach_dir_entry p_dir_entry_iter name:%s target:%s cmp:%d iter type:%d magic:0x%x\n", p_dir_entry_iter->fileName, entry_name,strcmp(p_dir_entry_iter->fileName, entry_name), p_dir_entry_iter->f_type, p_dir_entry_iter->magic);
+            if (enable_debug) {
+                printf("debug %s p_dir is read disk, item fileName:%s i_no:%d type:%d magic:%d\n", 
+                    __FILE__, 
+                    p_dir_entry_iter->fileName, 
+                    p_dir_entry_iter->i_no, 
+                    p_dir_entry_iter->f_type, 
+                    p_dir_entry_iter->magic
+                );
+            }
            if (p_dir_entry_iter->f_type != FT_UNKNOWN && p_dir_entry_iter->magic == DIR_ENTRY_MAGIC) {
                 // 找到了就直接返回
                 p_dir->p_dir_entry = p_dir_entry_iter;
@@ -375,4 +406,45 @@ void dir_rewind(struct Dir *p_dir) {
     }
     p_dir->p_dir_entry = NULL;
     p_dir->dir_pos = 0;
+}
+
+bool dir_is_empty(struct Dir *p_dir) {
+    assert(p_dir);
+    struct Dir *p_dir_iter = malloc(sizeof(struct Dir));
+    int32_t count = 0;
+    memcpy(p_dir_iter, p_dir, sizeof(struct Dir));
+    dir_rewind(p_dir_iter);
+    struct Dir_entry *p_dir_entry = NULL;
+    while(p_dir_entry = dir_read(p_dir_iter)) {
+        count++;
+        // printf("debug dir_is_empty readdir count:%d p_dir_entry:0x%x name:%s type:%d  \n", count, p_dir_entry, p_dir_entry->fileName, p_dir_entry->f_type);
+    }
+    free(p_dir_iter);
+    assert(count >= 2);
+    return count == 2;
+}
+
+bool dir_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff) {
+    assert(p_dir && p_dir_entry);
+    if (p_dir_entry->f_type != FT_DIRECTORY) {
+        printf("dir_delete ftype is not FT_DIRECTORY, faild\n");
+        return false;
+    }
+    struct Dir *p_delete_dir = dir_open(g_current_part, p_dir_entry->i_no);
+    if (!dir_is_empty(p_delete_dir)) {
+        dir_close(p_delete_dir);
+        printf("dir_delete dir:%s is not empty, faild\n", p_dir_entry->fileName);
+        return false;
+    }
+    dir_close(p_delete_dir);
+
+    bool res = inode_release(g_current_part, p_dir_entry->i_no);
+    if (!res) {
+        printf("dir_delete inode_release faild\n");
+        return false;
+    }
+    // 理论上不应该会失败，失败了也没什么办法回滚，就这样吧，直接断言一定成功
+    res = delete_dir_entry(g_current_part, p_dir, p_dir_entry, buff);
+    assert(res);
+    return true;
 }

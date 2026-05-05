@@ -109,4 +109,19 @@ struct Dir_entry * dir_read(struct Dir *p_dir);
  * @param param p_dir: struct Dir *: 目录信息
 */
 void dir_rewind(struct Dir *p_dir);
+
+/*
+ * @brief 判断目录是否为空
+ * @param param p_dir: struct Dir *: 目录信息
+*/
+bool dir_is_empty(struct Dir *p_dir);
+
+/*
+ * @brief 删除目录对应的目录项和回收inode资源
+ * @param p_dir: struct Dir * :目录所在的父目录
+ * @param p_dir_entry: struct Dir_entry *: 目录的目录项
+ * @param buff : void *: 主调函数提供的缓冲区大小，要求至少1个扇区大小, 可为NULL,此时为内部自行分配
+ * @return 成功删除返回true 否则false
+*/
+bool dir_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff);
 #endif

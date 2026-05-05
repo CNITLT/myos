@@ -8,6 +8,8 @@
 #include "debug.h"
 #include "file.h"
 #include "thread.h"
+
+#define FORCE_FORMAT 0
 // 默认情况下的操作分区
 struct Partition *g_current_part; 
 
@@ -164,7 +166,7 @@ void fileSystem_init() {
             ide_read(p_part->p_disk, p_part->start_lba + 1, p_super_block, 1);
             printf("part:%s magic:0x%x size:%d\n", p_part->name, p_super_block->magic, p_part->size_sector);
             // 目录项可能会自己改一下，如果改过了重新格式化
-            if (p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER || p_super_block->dir_entry_size != sizeof(struct Dir_entry)) {
+            if (FORCE_FORMAT || p_super_block->magic != SUPER_BLOCK_MAGIC_NUMBER || p_super_block->dir_entry_size != sizeof(struct Dir_entry)) {
                 printf("part:%s init fileSystem\n", p_part->name);
                 partition_format(p_part);
             } else {
@@ -698,6 +700,8 @@ int32_t sys_mkdir(const char *path) {
             inode_init(p_inode, inode_no);
 
             memset(buff, 0, buff_size);
+            // 之后写入的两个. 和 .. 项目占的空间
+            p_inode->i_size += 2 * sizeof(struct Dir_entry);
             inode_sync(g_current_part, p_inode, buff);
             // 同步bitmap
             bitmap_sync(g_current_part, inode_no, Bitmap_type_inode);
@@ -795,4 +799,40 @@ struct Dir_entry * sys_readdir(struct Dir *p_dir) {
 
 void sys_rewinddir(struct Dir *p_dir) {
     dir_rewind(p_dir);
+}
+
+int32_t sys_rmdir(const char *path) {
+    assert(strlen(path) < MAX_PATH_LENGTH);
+    if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
+        // 能判断是根目录的情况, 直接-1, 不能删
+        return -1;
+    }
+    struct Path_search_record *p_path_search_record = sys_malloc(sizeof(struct Path_search_record));
+    memset(p_path_search_record, 0, sizeof(struct Path_search_record));
+    int inode_no = search_file(path, p_path_search_record);
+    bool has_parent_dir = (path_depth(path) == path_depth(p_path_search_record->searched_path));
+    bool is_found = has_parent_dir && inode_no != -1;
+    int32_t res = -1;
+    do {
+        if (!is_found) {
+            printf("sys_rmdir path %s not found\n", path);
+            break;
+        }
+        if (p_path_search_record->file_type != FT_DIRECTORY) {
+            printf("sys_rmdir path %s is not dir\n", path);
+            break;
+        }
+        struct Dir_entry dir_entry = {0};
+        bool search_res = search_dir_entry(g_current_part, p_path_search_record->p_parent_dir, strrchr(path, '/') + 1, &dir_entry);
+        if (!search_res) {
+            printf("sys_rmdir path %s search_dir_entry faild\n", path);
+            break;
+        }
+        res = dir_delete(p_path_search_record->p_parent_dir, &dir_entry, NULL);
+        res = res ? 0 : -1;
+    }while(0);
+
+    dir_close(p_path_search_record->p_parent_dir);
+    sys_free(p_path_search_record);
+    return res;
 }

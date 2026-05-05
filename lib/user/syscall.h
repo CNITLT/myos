@@ -18,6 +18,7 @@ enum SYSCALL_NR {
     SYS_CLOSEDIR,
     SYS_READDIR,
     SYS_REWINDDIR,
+    SYS_RMDIR,
  };
 /*
 @brief 用户态的系统调用入口
@@ -112,4 +113,11 @@ struct Dir_entry * readdir(struct Dir *p_dir);
  * @param param p_dir: struct Dir *: 目录信息
 */
 void rewinddir(struct Dir *p_dir);
+
+/*
+    @brief 删除空目录，对有内容的目录无法删除
+    @param path: const char *: 目录路径
+    @return 成功0， 失败-1
+*/
+int32_t rmdir(const char *path);
 #endif

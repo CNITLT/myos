@@ -59,3 +59,7 @@ struct Dir_entry * readdir(struct Dir *p_dir) {
 void rewinddir(struct Dir *p_dir) {
     syscall(SYS_REWINDDIR, p_dir);
 }
+
+int32_t rmdir(const char *path) {
+    return syscall(SYS_RMDIR, path);
+}
