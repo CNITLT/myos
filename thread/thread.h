@@ -102,6 +102,7 @@ struct task_struct {
    vaddr_t page_dir; //页目录地址,因为能访问到这个变量的时候已经是保护模式了，所以是虚拟地址
    memory_pool vmemory_pool; // 用于标记虚拟地址空间池, 只用于用户进程，内核用的是全局变量记录的
    uint32_t current_workdir_inode_no; // 当前工作目录的inode编号
+   uint32_t parent_pid; // 为-1表示无父进程
    uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
 
 

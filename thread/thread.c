@@ -88,6 +88,7 @@ void init_pcb(struct task_struct* pcb, char* name, int priority){
     pcb->elapsed_ticks = 0;
     pcb->page_dir = NULL;
     pcb->pid = allcoate_pid();
+    pcb->parent_pid = -1;
     if(pcb == main_thread_pcb){
         pcb->status = TASK_RUNNING;
     }
@@ -279,6 +280,8 @@ void main_thread_func(void *args){
     open_interrupt();
     init_other_in_main_thread();
     // 其他测试逻辑
+    // 测试关中断的话磁盘还能读取吗,结论可以
+    // close_interrupt();
     struct Dir *p_dir = sys_opendir("/");
     struct Dir_entry *p_dir_entry;
     int count = 0;
