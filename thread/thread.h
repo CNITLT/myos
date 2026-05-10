@@ -154,7 +154,7 @@ void init_pcb(struct task_struct* pcb, char* name, int priority);
 struct task_struct* thread_start(char* name, int priority, thread_func function, void* func_arg);
 
 /*
-@brief 获取当前运行线程的PCB地址，原理是因为线程运行栈和PCB都在一个页上，且页的最低地址就是PCB的首地址
+@brief 获取当前运行线程的PCB地址，原理是因为线程运行栈和PCB都在一个页上，且页的最低地址就是PCB的首地址， （仅限内核栈时调用）
 @return struct task_struct*: PCB地址
 */
 struct task_struct* get_current_pcb(void);
