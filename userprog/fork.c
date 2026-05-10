@@ -161,8 +161,8 @@ NAKEDFUNC static void intr_exit(void) {
     "); 
 }
 
-void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
-    assert(is_user_thread(child_pcb));
+void adjust_copyed_child_pcb_stack_book_version(struct task_struct *child_pcb) {
+        assert(is_user_thread(child_pcb));
     // 先定位中断栈
     struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
     p_interrupt_stack->eax = 0;
@@ -191,9 +191,14 @@ void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
 
    /* 把构建的thread_stack的栈顶做为switch_to恢复数据时的栈顶 */
    child_pcb->self_kernel_stack = ebp_ptr_in_thread_stack;	    
-   
-    /*
-    // 自己写的，有点问题
+}
+
+void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
+    assert(is_user_thread(child_pcb));
+    // 先定位中断栈
+    struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
+    p_interrupt_stack->eax = 0;
+ 
     // 再拉一个线程栈
     struct thread_stack *p_thread_stack = (Byte *)p_interrupt_stack - sizeof(struct thread_stack);
     // 子进程里的这个返回0
@@ -206,7 +211,8 @@ void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
     p_thread_stack->ebx = 0;
     p_thread_stack->esi = 0;
     p_thread_stack->edi = 0;
-    */
+    
+    child_pcb->self_kernel_stack = p_thread_stack;
 }
 
 void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
