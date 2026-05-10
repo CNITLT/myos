@@ -5,9 +5,9 @@
 void test_fork() {
     pid_t pid = fork();
     if (pid) {
-        printf("this is parent process fork ret:%d intr_state:%d\n", pid, get_interrupt_state());
+        printf("this is parent process fork ret:%d intr_state:%d now_pid:%d\n", pid, get_interrupt_state(), getpid());
     }  else {
-        printf("this is child process fork ret:%d intr_state:%d\n", pid, get_interrupt_state());
+        printf("this is child process fork ret:%d intr_state:%d now_pid:%d\n", pid, get_interrupt_state(), getpid());
     }
     while(1);
 }

@@ -7,7 +7,7 @@
 #include "fs.h"
 #include "process.h"
 #include "page.h"
-
+#include "stddef.h"
 void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
     assert(child_pcb && parent_pcb);
     assert(is_user_thread(parent_pcb));
@@ -148,11 +148,51 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
     page_dir_activate(parent_pcb);
 }
 
+NAKEDFUNC static void intr_exit(void) {
+    asm volatile(" \
+        addl $4, %esp; \
+        popa; \
+        pop %gs; \
+        pop %fs; \
+        pop %es; \
+        pop %ds; \
+        addl $4,%esp; \
+        iret; \
+    "); 
+}
 
 void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
     assert(is_user_thread(child_pcb));
     // 先定位中断栈
     struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
+    uint32_t *intr_0_stack = p_interrupt_stack;
+    // 先按书上的来
+     uint32_t* ret_addr_in_thread_stack  = (uint32_t*)intr_0_stack - 1;
+
+   /***   这三行不是必要的,只是为了梳理thread_stack中的关系 ***/
+   uint32_t* esi_ptr_in_thread_stack = (uint32_t*)intr_0_stack - 2; 
+   uint32_t* edi_ptr_in_thread_stack = (uint32_t*)intr_0_stack - 3; 
+   uint32_t* ebx_ptr_in_thread_stack = (uint32_t*)intr_0_stack - 4; 
+   /**********************************************************/
+
+   /* ebp在thread_stack中的地址便是当时的esp(0级栈的栈顶),
+   即esp为"(uint32_t*)intr_0_stack - 5" */
+   uint32_t* ebp_ptr_in_thread_stack = (uint32_t*)intr_0_stack - 5; 
+
+   /* switch_to的返回地址更新为intr_exit,直接从中断返回 */
+   *ret_addr_in_thread_stack = (uint32_t)intr_exit;
+
+   /* 下面这两行赋值只是为了使构建的thread_stack更加清晰,其实也不需要,
+    * 因为在进入intr_exit后一系列的pop会把寄存器中的数据覆盖 */
+   *ebp_ptr_in_thread_stack = *ebx_ptr_in_thread_stack =\
+   *edi_ptr_in_thread_stack = *esi_ptr_in_thread_stack = 0;
+   /*********************************************************/
+
+   /* 把构建的thread_stack的栈顶做为switch_to恢复数据时的栈顶 */
+   child_pcb->self_kernel_stack = ebp_ptr_in_thread_stack;	    
+   
+    /*
+    // 自己写的，有点问题
     // 再拉一个线程栈
     struct thread_stack *p_thread_stack = (Byte *)p_interrupt_stack - sizeof(struct thread_stack);
     // 子进程里的这个返回0
@@ -165,6 +205,7 @@ void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
     p_thread_stack->ebx = 0;
     p_thread_stack->esi = 0;
     p_thread_stack->edi = 0;
+    */
 }
 
 void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb) {

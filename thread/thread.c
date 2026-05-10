@@ -26,6 +26,11 @@ void kernel_thread(thread_func* function, void* func_arg) {
    //发送中断结束命令EOI,不然从中断切换线程后，E820不会再发时钟中断，等价于没开中断，会一直运行切换后的线程
    outb(0xa0, 0x20);
    outb(0x20, 0x20);
+   const bool enable_debug = false;
+   if (enable_debug) {
+    struct task_struct *pcb = get_current_pcb();
+    printf("%s pid:%d\n", __FILE__, pcb->pid);
+   }
    function(func_arg); 
 }
 
@@ -158,7 +163,10 @@ void init_thread_boot(thread_func main_function, void* func_arg){
 void schedule() {
     //不在内部关中断，是因为用这个函数的时候在外部关，换线程后，还有机会换回来，然后在外部开
     assert(get_interrupt_state() == INTERRUPT_DISABLE);
-    //debug("schedul begin\n");
+    const enable_debug = false;
+    if (enable_debug) {
+        debug("schedul begin\n");
+    }
    struct task_struct* cur = get_current_pcb(); 
    if (cur->status == TASK_RUNNING) { // 若此线程只是cpu时间片到了,将其加入到就绪队列尾
         cur->ticks = cur->priority;     // 重新将当前线程的ticks再重置为其priority;
@@ -179,12 +187,18 @@ void schedule() {
 
     
    // clear_screen();
-   //debug("%x switch to %x\n", cur, next);
+   if (enable_debug) {
+        debug("%x switch to %x pid:%d->%d\n", cur, next, cur->pid, next->pid);
+   }
    next->status = TASK_RUNNING;
-   //debug("before activate cr3:%x\n",get_cr3_register());
+   if (enable_debug) {
+        debug("before activate cr3:%x\n",get_cr3_register());
+   }
    process_activate(next);
-   //debug("after activate cr3:%x\n",get_cr3_register());
-   //debug("schedul end next call switch_to\n");
+   if (enable_debug) {
+        debug("after activate cr3:%x\n",get_cr3_register());
+        debug("schedul end next call switch_to\n");
+   }
    switch_to(cur, next);
 }
 
