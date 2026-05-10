@@ -165,6 +165,7 @@ void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
     assert(is_user_thread(child_pcb));
     // 先定位中断栈
     struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
+    p_interrupt_stack->eax = 0;
     uint32_t *intr_0_stack = p_interrupt_stack;
     // 先按书上的来
      uint32_t* ret_addr_in_thread_stack  = (uint32_t*)intr_0_stack - 1;
