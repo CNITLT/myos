@@ -20,7 +20,7 @@ struct list thread_all_list;//总队列
 struct mutex pid_lock;
 
 /* 由kernel_thread去执行function(func_arg) */
-static void kernel_thread(thread_func* function, void* func_arg) {
+void kernel_thread(thread_func* function, void* func_arg) {
 /* 执行function前要开中断,避免后面的时钟中断被屏蔽,而无法调度其它线程 */
    open_interrupt();
    //发送中断结束命令EOI,不然从中断切换线程后，E820不会再发时钟中断，等价于没开中断，会一直运行切换后的线程

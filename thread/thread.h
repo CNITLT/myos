@@ -127,7 +127,8 @@ extern struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时�
 extern struct list thread_ready_list; //就绪队列
 extern struct list thread_all_list;//总队列
 
-
+// 用于PCB初始化时指定的函数，其他情况不该直接调用
+void kernel_thread(thread_func* function, void* func_arg);
 /*
 @brief 在初始化后的PCB上填充线程要运行的函数信息
 

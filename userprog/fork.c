@@ -11,11 +11,16 @@
 void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
     assert(child_pcb && parent_pcb);
     assert(is_user_thread(parent_pcb));
-    memcpy(child_pcb, parent_pcb, sizeof(struct task_struct));
+    const enable_debug = true;
+    memcpy(child_pcb, parent_pcb, PAGE_SIZE);
     // 一些需要修改的数据
     child_pcb->pid = allcoate_pid();
     child_pcb->parent_pid = parent_pcb->pid;
 
+    if (enable_debug) {
+        // 这里目前分配正常，但返回的时候就不对了，可能哪里写坏了
+        printf("%s child_pcb->pid:%d\n", __FILE__, child_pcb->pid);
+    }
     child_pcb->elapsed_ticks = 0;
     child_pcb->status = TASK_READY;
     child_pcb->ticks = child_pcb->priority;
@@ -149,11 +154,17 @@ void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
     // 先定位中断栈
     struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
     // 再拉一个线程栈
-    struct thread_stack *p_thread_func = (Byte *)p_interrupt_stack - sizeof(struct thread_stack);
+    struct thread_stack *p_thread_stack = (Byte *)p_interrupt_stack - sizeof(struct thread_stack);
     // 子进程里的这个返回0
     p_interrupt_stack->eax = 0;
     // 填充intr_exit_from, 用intr_exit_from返回
-    thread_create(child_pcb, intr_exit_from, p_interrupt_stack);
+    p_thread_stack->eip = kernel_thread;
+    p_thread_stack->function = intr_exit_from;
+    p_thread_stack->func_arg = p_interrupt_stack;
+    p_thread_stack->ebp = 0;
+    p_thread_stack->ebx = 0;
+    p_thread_stack->esi = 0;
+    p_thread_stack->edi = 0;
 }
 
 void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
@@ -171,6 +182,7 @@ pid_t sys_fork() {
         printf("%s malloc pcb faild\n", __FILE__);
         return -1;
     }
+    memset(child_pcb, 0, PAGE_SIZE);
     struct task_struct* parent_pcb = get_current_pcb();
     interrupt_state old_state = close_interrupt();
     copy_process(child_pcb, parent_pcb);
@@ -178,5 +190,6 @@ pid_t sys_fork() {
     list_push_back(&thread_ready_list, &child_pcb->general_tag);
     list_push_back(&thread_all_list, &child_pcb->all_list_tag);
     set_interrupt_state(old_state);
+    // printf("%s return pid:%d\n", __FILE__, child_pcb->pid);
     return child_pcb->pid;
 }
