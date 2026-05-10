@@ -1,4 +1,4 @@
-#include "fock.h"
+#include "fork.h"
 #include "thread.h"
 #include "debug.h"
 #include "string.h"
@@ -90,10 +90,14 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
         p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, child_pcb->page_dir);
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
             //说明没有对应的页表，映射一个页表
-            set_page_dir_entry(user_page_vaddr, (paddr_t)pmalloc_page(1), child_pcb->page_dir, parent_page_dir_entry_attr);
+            paddr_t alloced_page = (paddr_t)pmalloc_page(1);
+            assert(alloced_page);
+            set_page_dir_entry(user_page_vaddr, alloced_page, child_pcb->page_dir, parent_page_dir_entry_attr);
         }
         if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
-            set_page_table_entry(user_page_vaddr, (paddr_t)pmalloc_page(1), child_pcb->page_dir, parent_page_table_entry_attr);
+            paddr_t alloced_page = (paddr_t)pmalloc_page(1);
+            assert(alloced_page);
+            set_page_table_entry(user_page_vaddr, alloced_page, child_pcb->page_dir, parent_page_table_entry_attr);
         }
         // 重新激活刷新下硬件缓存
         page_dir_activate(child_pcb);
@@ -102,4 +106,41 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
     }
     sys_free_in_kernel(page_buff);
     page_dir_activate(parent_pcb);
+}
+
+
+void adjust_copyed_child_pcb_stack(struct task_struct *child_pcb) {
+    assert(is_user_thread(child_pcb));
+    // 先定位中断栈
+    struct interrupt_stack *p_interrupt_stack = (Byte *)child_pcb + PAGE_SIZE - sizeof(struct interrupt_stack);
+    // 再拉一个线程栈
+    struct thread_stack *p_thread_func = (Byte *)p_interrupt_stack - sizeof(struct thread_stack);
+    // 子进程里的这个返回0
+    p_interrupt_stack->eax = 0;
+    // 填充intr_exit_from, 用intr_exit_from返回
+    thread_create(child_pcb, intr_exit_from, p_interrupt_stack);
+}
+
+void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
+    assert(child_pcb && parent_pcb);
+    assert(is_user_thread(parent_pcb));
+
+    copy_parent_pcb_to_child(child_pcb, parent_pcb);
+    copy_parent_user_sapce_data_to_child(child_pcb, parent_pcb);
+    adjust_copyed_child_pcb_stack(child_pcb);
+}
+
+pid_t sys_fork() {
+    struct task_struct* child_pcb = malloc_kernel_page(1);
+    if (!child_pcb) {
+        printf("%s malloc pcb faild\n", __FILE__);
+        return -1;
+    }
+    struct task_struct* parent_pcb = get_current_pcb();
+    interrupt_state old_state = close_interrupt();
+    copy_process(child_pcb, parent_pcb);
+    // 然后放进队列里面
+    list_push_back(&thread_ready_list, &child_pcb->general_tag);
+    list_push_back(&thread_all_list, &child_pcb->all_list_tag);
+    set_interrupt_state(old_state);
 }

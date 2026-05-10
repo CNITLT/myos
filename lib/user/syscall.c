@@ -81,3 +81,7 @@ int32_t chdir(const char *path) {
 int32_t stat(const char *path, struct Stat *p_stat) {
     return syscall(SYS_STAT, path, p_stat);
 }
+
+pid_t fork() {
+    return syscall(SYS_FORK);
+}

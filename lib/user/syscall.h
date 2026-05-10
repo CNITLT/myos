@@ -22,6 +22,7 @@ enum SYSCALL_NR {
     SYS_GETCWD,
     SYS_CHDIR,
     SYS_STAT,
+    SYS_FORK,
  };
 /*
 @brief 用户态的系统调用入口
@@ -146,4 +147,10 @@ int32_t chdir(const char *path);
  * @return 成功0，否则-1
 */
 int32_t stat(const char *path, struct Stat *p_stat);
+
+
+/*
+ * @brief 复制一个子进程，父进程返回子进程pid, 子进程返回0， 失败返回-1
+*/
+pid_t fork();
 #endif
