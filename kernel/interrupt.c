@@ -463,6 +463,7 @@ static void default_interrupt_func(void){
     #ifdef DEFAULT_INTR_FUNC_PF
     printf("default interruput func interupt_num:%d error_code:0X%x CS:EIP:0x%x:0X%x\n",
         p_intr_stack->interrupt_num, p_intr_stack->err_code,p_intr_stack->cs,p_intr_stack->eip);
+    while(1);
     #endif
 }
 

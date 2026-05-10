@@ -107,7 +107,7 @@ void pfree_page(paddr_t paddr, size_t page_count);
 @param start_vaddr:vaddr_t: 虚拟地址的分配起点, 传入堆的起点就行
 @param page_count:size_t: 分配的页数量
 @param p_vmemory_pool:memory_pool*:进程对应的虚拟内存池
-@param page_dir:vaddr_t: 进程对应的页目录虚拟地址
+@param page_dir:vaddr_t: 进程对应的页目录虚拟地址 (PAGE_DIR_VADDR或者是KERNEL_PAGE_DIR_VADDR)
 @param page_attr:uint32_t: 页属性
 @return vaddr_t 分配后的页虚拟首地址，分配失败返回NULL
 */

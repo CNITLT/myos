@@ -10,6 +10,8 @@
 #include "fs.h"
 #include "syscall.h"
 #include "dir.h"
+#include "test_thread.h"
+
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
 struct task_struct* idle_thread_pcb; //idle空闲进程
@@ -317,6 +319,7 @@ void main_thread_func(void *args){
 
     free(buff);
     
+    process_execute(test_fork, "test_fork");
     // int res = sys_mkdir("/a");
     // printf("call sys_mkdir res:%d\n", res);
     // char *fileName = "/e2.txt";

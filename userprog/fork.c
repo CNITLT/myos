@@ -56,13 +56,23 @@ void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct 
 void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
     assert(child_pcb && parent_pcb);
     assert(is_user_thread(parent_pcb));
+    const bool enable_debug = false;
     // 如果是用户进程的话vmemory_pool在copy_pcb以及复制过了，这里只需要管数据和页表即可
     // 分配一个页用于数据中转
     Byte *page_buff = sys_malloc_in_kernel(PAGE_SIZE);
+    // for(int i = 0; i < PAGE_SIZE; i++) {
+    //     printf("%s page_buff[%d]=%d;\n",__FILE__,i,i);
+    //     page_buff[i] = i;
+    // }
+    assert(page_buff);
     uint32_t parent_page_dir_entry_attr;
     uint32_t parent_page_table_entry_attr;
 
     vaddr_t user_memory_end_vaddr = parent_pcb->vmemory_pool.start + parent_pcb->vmemory_pool.length;
+    if (enable_debug) {
+         printf("%s parent_pcb->vmemory_pool.start:0x%x length:0x%x max_vaddr:0x%x\n", __FILE__, parent_pcb->vmemory_pool.start , parent_pcb->vmemory_pool.length, user_memory_end_vaddr);
+    }
+
     for (int i = 0;i < parent_pcb->vmemory_pool.bmap.len_bit; i++) {
         bit_state state = bitmap_get(&parent_pcb->vmemory_pool.bmap, i);
         if (state == BIT_STATE_UNUSE) {
@@ -75,33 +85,58 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
         }
         // 激活父进程页表
         page_dir_activate(parent_pcb);
-        // 复制数据到缓冲区
-        memcpy(page_buff, user_page_vaddr, PAGE_SIZE);
         // 复制下父进程的页表属性
-        page* p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, parent_pcb->page_dir);
+        // 先看下页表的属性，如果不存在的话也跳过，感觉有些地方还是有点不同步
+        if (enable_debug) {
+            printf("%s i:%d will get_page_dir_entry_vaddr:0x%x page_dir paddr:0x%x\n", __FILE__, i,user_page_vaddr, parent_pcb->page_dir);
+        }
+        page* p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
         parent_page_dir_entry_attr = *(uint32_t *)p_page_dir_entry & 0xFFF;
-        page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, parent_pcb->page_dir);
-        parent_page_table_entry_attr = *(uint32_t *)p_page_table_entry & 0xFFF;
+        if (p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        }
 
+        page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
+        parent_page_table_entry_attr = *(uint32_t *)p_page_table_entry & 0xFFF;
+        if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        } 
+
+        // 复制数据到缓冲区
+        if (enable_debug) {
+            printf("%s i:%d will copy 0x%x data to buff:0x%x\n", __FILE__, i, user_page_vaddr, page_buff);
+        }
+        memcpy(page_buff, user_page_vaddr, PAGE_SIZE);
+        
+ 
         // 激活子进程页表
         page_dir_activate(child_pcb);
         // 看下子进程的页表如果没有就从父进程开始复制
-        p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, child_pcb->page_dir);
-        p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, child_pcb->page_dir);
+        p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
+        p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
             //说明没有对应的页表，映射一个页表
             paddr_t alloced_page = (paddr_t)pmalloc_page(1);
             assert(alloced_page);
-            set_page_dir_entry(user_page_vaddr, alloced_page, child_pcb->page_dir, parent_page_dir_entry_attr);
+            if (enable_debug) {
+                printf("%s i:%d will set_page_dir_entry 0x%x data to paddr:0x%x\n", __FILE__,i, user_page_vaddr, alloced_page);
+            }
+            set_page_dir_entry(user_page_vaddr, alloced_page, PAGE_DIR_VADDR, parent_page_dir_entry_attr);
         }
         if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
             paddr_t alloced_page = (paddr_t)pmalloc_page(1);
             assert(alloced_page);
-            set_page_table_entry(user_page_vaddr, alloced_page, child_pcb->page_dir, parent_page_table_entry_attr);
+            if (enable_debug) {
+                printf("%s i:%d will set_page_table_entry 0x%x data to paddr:0x%x\n", __FILE__,i, user_page_vaddr, alloced_page);
+            }
+            set_page_table_entry(user_page_vaddr, alloced_page, PAGE_DIR_VADDR, parent_page_table_entry_attr);
         }
         // 重新激活刷新下硬件缓存
         page_dir_activate(child_pcb);
         // 复制数据
+        if (enable_debug) {
+            printf("%s i:%d will copy buff:0x%x data to 0x%x\n", __FILE__, i, page_buff, user_page_vaddr);
+        }
         memcpy(user_page_vaddr, page_buff, PAGE_SIZE);
     }
     sys_free_in_kernel(page_buff);
