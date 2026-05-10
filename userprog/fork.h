@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "stddef.h"
+#include "thread.h"
 struct task_struct;
 
 /*
@@ -36,4 +37,5 @@ void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb)
  * @brief 复制一个子进程，父进程返回子进程pid, 子进程返回0， 失败返回-1
 */
 pid_t sys_fork();
+
 #endif

@@ -143,4 +143,5 @@ pid_t sys_fork() {
     list_push_back(&thread_ready_list, &child_pcb->general_tag);
     list_push_back(&thread_all_list, &child_pcb->all_list_tag);
     set_interrupt_state(old_state);
+    return child_pcb->pid;
 }
