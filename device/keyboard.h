@@ -6,6 +6,8 @@
 #include "io.h"
 #include "queue.h"
 
+// 这里定义组合键的值, ascii规定如此
+#define KEY_CTRL(char) (char & 0x1f)
 
 /*
 @brief 键盘中断函数

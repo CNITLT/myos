@@ -154,8 +154,13 @@ void keyboard_interupt(void){
         //定义的数组内的部分
         else if(0x0 <= make_code && make_code <= 0x3a){
             uint8_t index = (make_code &= 0x00ff);
-           ascii_code =  keymap[index][shift];
+            ascii_code =  keymap[index][shift];
         }
+        
+        if (ascii_code && ctrl_status) {
+            ascii_code = KEY_CTRL(ascii_code);
+        }
+
         if(ascii_code){
             lock(&io_queue.mutex);
             if(IO_Queue_is_full(&io_queue)){

@@ -4,6 +4,7 @@
 #include "print.h"
 #include "syscall.h"
 #include "file.h"
+#include "keyboard.h"
 
 // shell 单次最大的键入字符
 #define MAX_CMD_LENGTH 512
@@ -32,6 +33,7 @@ static void shell_readline(char *buff, int32_t count) {
         {
         case '\r':
         case '\n':
+        case KEY_CTRL('c'):
             *pos = 0;
             put_char('\n');
             return;
@@ -43,6 +45,20 @@ static void shell_readline(char *buff, int32_t count) {
                 *pos = 0;
                 put_char('\b');
             }
+            break;
+        case KEY_CTRL('u'):
+            while(pos != buff) {
+                *pos = 0;
+                pos--;
+                put_char('\b');
+            }
+            *pos = 0;
+            break;
+        case KEY_CTRL('l'):
+            *pos = 0;
+            clear_screen();
+            print_prompt();
+            printf("%s", buff);
             break;
         default:
             put_char(*pos);
