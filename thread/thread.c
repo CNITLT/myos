@@ -11,6 +11,7 @@
 #include "syscall.h"
 #include "dir.h"
 #include "test_thread.h"
+#include "file.h"
 
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
@@ -331,6 +332,10 @@ void main_thread_func(void *args){
     char *res = getcwd(buff, MAX_PATH_LENGTH);
     printf("getcwd:0x%x %s res:0x%x %s\n",buff, buff,res, res);
 
+    memset(buff, 0, MAX_PATH_LENGTH);
+    read(stdin_no, buff, 20);
+    printf("buff read:%s\n", buff);
+    
     free(buff);
     
     process_execute(test_fork, "test_fork");

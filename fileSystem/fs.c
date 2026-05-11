@@ -566,6 +566,20 @@ int32_t sys_read(int32_t fd, void *data, size_t count) {
         printf("sys_read read faild for fd less than 0 \n");
         return -1;
     }
+    if (fd == stderr_no || fd == stdout_no) {
+        printf("sys_read read faild for stderr or stdout\n");
+        return -1;
+    }
+    if (fd == stdin_no) {
+        char *buff = data;
+        int read_count = 0;
+        while(read_count < count) {
+            *buff = read_ascii_from_keyboard_ioqueue();
+            buff++;
+            read_count++;
+        }
+        return read_count == 0 ? -1 :read_count; 
+    }
     uint32_t global_fd_index = fd_local2global(fd);
     struct File* p_file = &g_file_table[global_fd_index];
     return file_read(p_file, data, count);
