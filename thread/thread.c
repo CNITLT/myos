@@ -12,6 +12,7 @@
 #include "dir.h"
 #include "test_thread.h"
 #include "file.h"
+#include "shell.h"
 
 #define MIN_TICKS 1
 struct task_struct* main_thread_pcb; //主线程PCB，等会启动的时候切换到这个线程，保证模型一致
@@ -333,12 +334,13 @@ void main_thread_func(void *args){
     printf("getcwd:0x%x %s res:0x%x %s\n",buff, buff,res, res);
 
     memset(buff, 0, MAX_PATH_LENGTH);
-    read(stdin_no, buff, 20);
+    // read(stdin_no, buff, 20);
     printf("buff read:%s\n", buff);
     
     free(buff);
     
-    process_execute(test_fork, "test_fork");
+    my_shell();
+    // process_execute(test_fork, "test_fork");
     // int res = sys_mkdir("/a");
     // printf("call sys_mkdir res:%d\n", res);
     // char *fileName = "/e2.txt";
