@@ -86,4 +86,6 @@ char *strcat(char *dst, const char*src);
 @return size_t 返回出现的次数
 */
 size_t strchrs(const char* str, char ch);
+
+
 #endif

@@ -12,9 +12,11 @@
 #define MAX_ARG_COUNT 16
 // 当前所在的目录名字的最大长度
 #define MAX_CWD_LENGTH 64
+
 // 存储输入的命令
 static char g_cmd_line[MAX_CMD_LENGTH] = {0};
-
+static char *g_argv[MAX_ARG_COUNT] = {0};
+static size_t g_argc = 0;
 // 当前所在的目录名
 char g_current_work_dir_name_cache[MAX_CWD_LENGTH] = {0};
 
@@ -69,6 +71,47 @@ static void shell_readline(char *buff, int32_t count) {
     printf("\nreadline max read %d char, now is more than threshold\n", MAX_CMD_LENGTH);
 }
 
+// 对g_cmd_line内的字符串以空格进行分割，并将结果存入g_argv_line内，会对g_cmd_line有所修改，空格的位置会被写入0
+// 返回分割的个数
+static size_t cmd_parse() {
+    char separator = ' ';
+    char *str = g_cmd_line;
+    char **arr = g_argv;
+    g_argc = 0;
+    memset(arr,NULL, MAX_ARG_COUNT);
+    char *next = str;
+    char **arr_next = arr;
+    size_t count = 0;
+    while(*next == separator) {
+        next++;
+    }
+
+    while(*next && count < MAX_ARG_COUNT) {
+        while (*next == separator) {
+            *next = 0;
+            next++;
+        }
+
+        // 先找到下一个首字母开头
+        if (*next && *next != separator) {
+            *arr_next = next;
+            arr_next++;
+            count++;
+            while(*next && *next != separator) {
+                next++;
+            } 
+        }
+    }
+    g_argc = count;
+    return count;
+}
+
+static void debug_parse() {
+    for(int i = 0; i < g_argc; i++) {
+        printf("parse %d/%d arg:%s\n", i, g_argc, g_argv[i]);
+    }
+}
+
 void my_shell() {
     g_current_work_dir_name_cache[0] = '/';
     put_char('\n');
@@ -79,5 +122,7 @@ void my_shell() {
         if (g_cmd_line[0] == 0) {
             continue;
         }
+        cmd_parse();
+        // debug_parse();
     }
 }
