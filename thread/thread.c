@@ -377,3 +377,48 @@ void main_thread_func(void *args){
 void init_idle_thread(){
     thread_start("idle",1,idle_thread_func,NULL);
 }
+
+
+static bool sys_ps_traversal_func(struct list_node* node, int arg) {
+    struct task_struct *pcb = elem2entry(struct task_struct,all_list_tag, node);
+    int buff_length = 17;
+    char buff[17] = {0};
+    buff[buff_length - 1] = 0;
+    memset(buff, ' ', buff_length - 1);
+    sprintf(buff, "%d", pcb->pid);
+    printf("%s", buff);
+
+    memset(buff, ' ', buff_length - 1);
+    sprintf(buff, "%d", pcb->parent_pid);
+    printf("%s", buff);
+
+    memset(buff, ' ', buff_length - 1);
+    char *stat_str[] = {
+    "RUNNING",
+    "READY", 
+    "BLOCKED", 
+    "WAITING", 
+    "HANGING", 
+    "DIED"
+    };
+    sprintf(buff, "%s", stat_str[pcb->status]);
+    printf("%s", buff);
+
+    memset(buff, ' ', buff_length - 1); 
+    sprintf(buff, "%d", pcb->ticks);
+    printf("%s", buff);
+
+    memset(buff, ' ', buff_length - 1); 
+    sprintf(buff, "%s", pcb->name);
+    printf("%s\n", buff);
+
+    return false;
+}
+
+void sys_ps() {
+    printf("\nPID             PPID           STAT            TICKS           COMMAND         \n");
+    // 打印当前所有的进程信息
+    interrupt_state old_state = close_interrupt();
+    list_traversal(&thread_all_list, sys_ps_traversal_func, 0);
+    set_interrupt_state(old_state);
+}

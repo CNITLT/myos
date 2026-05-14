@@ -122,4 +122,9 @@ int32_t file_read(struct File *p_file, void *data, size_t count);
  * @return 成功删除返回true 否则false
 */
 bool file_delete(struct Dir *p_dir, struct Dir_entry *p_dir_entry, void* buff);
+
+/*
+ * @brief 打印所有进程信息
+*/
+void sys_ps();
 #endif

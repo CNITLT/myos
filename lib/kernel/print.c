@@ -68,7 +68,7 @@ void put_char(char ch){
         screen[row][col][1] = BLACK_BACKGROUND_WHITE_CHAR;
         cursor_loc++;
         set_cursor_loc(cursor_loc);
-        if(cursor_loc > 2000){
+        if(cursor_loc >= 2000){
             roll_up();
         }
     }

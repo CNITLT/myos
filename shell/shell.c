@@ -124,5 +124,9 @@ void my_shell() {
         }
         cmd_parse();
         // debug_parse();
+
+        if (g_argv[0] && g_argc == 1 && !strcmp("ps", g_argv[0])) {
+            ps();
+        }
     }
 }

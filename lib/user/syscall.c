@@ -85,3 +85,8 @@ int32_t stat(const char *path, struct Stat *p_stat) {
 pid_t fork() {
     return syscall(SYS_FORK);
 }
+
+void ps() {
+    syscall(SYS_PS);
+    return 0;
+}

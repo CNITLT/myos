@@ -23,6 +23,7 @@ enum SYSCALL_NR {
     SYS_CHDIR,
     SYS_STAT,
     SYS_FORK,
+    SYS_PS
  };
 /*
 @brief 用户态的系统调用入口
@@ -153,4 +154,9 @@ int32_t stat(const char *path, struct Stat *p_stat);
  * @brief 复制一个子进程，父进程返回子进程pid, 子进程返回0， 失败返回-1
 */
 pid_t fork();
+
+/*
+ * @brief 打印所有进程信息
+ */
+void ps();
 #endif

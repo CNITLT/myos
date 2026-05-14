@@ -230,4 +230,9 @@ void main_thread_func(void *args);
 @brief 初始化idle线程的相关结构
 */
 void init_idle_thread();
+
+/*
+ * @brief 打印所有进程信息
+*/
+void sys_ps();
 #endif

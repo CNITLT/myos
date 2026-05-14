@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "fs.h"
 #include "fork.h"
+#include "thread.h"
 syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
 /*
 默认系统调用中断，还是只打印一句话
@@ -33,6 +34,7 @@ void syscall_init(){
     syscall_table[SYS_CHDIR] = sys_chdir;
     syscall_table[SYS_STAT] = sys_stat;
     syscall_table[SYS_FORK] = sys_fork;
+    syscall_table[SYS_PS] = sys_ps;
 }
 
 pid_t sys_getpid(void){
