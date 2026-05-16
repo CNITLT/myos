@@ -113,9 +113,23 @@ static void debug_parse() {
     }
 }
 
-void my_shell() {
+static void flush_cwd_name_cache() {
+    memset(g_current_work_dir_name_cache, 0, MAX_CWD_LENGTH);
     g_current_work_dir_name_cache[0] = '/';
+    char *cwd = getcwd(NULL, 0);
+    char *name = strrchr(cwd, '/');
+    if (strcmp("/", cwd)) {
+        name++;
+        // printf("%s name:%s cwd:%s\n", __FILE__, name, cwd);
+        memset(g_current_work_dir_name_cache, 0, MAX_CWD_LENGTH);
+        memcpy(g_current_work_dir_name_cache, name, strlen(name));
+    }
+    free(cwd);
+}
+
+void my_shell() {
     put_char('\n');
+    flush_cwd_name_cache();
     while(1) {
         print_prompt();
         memset(g_cmd_line, 0, MAX_CMD_LENGTH);
@@ -143,6 +157,7 @@ void my_shell() {
             buildin_pwd(g_argc,g_argv);
         } else if(!strcmp("cd", g_argv[0])) {
             buildin_cd(g_argc, g_argv);
+            flush_cwd_name_cache();
         }
     }
 }
