@@ -143,8 +143,8 @@ void my_shell() {
             continue;
         }
 
-        if (g_argc == 1 && !strcmp("ps", g_argv[0])) {
-            ps();
+        if (!strcmp("ps", g_argv[0])) {
+            buildin_ps(g_argc, g_argv);;
         } else if (g_argc == 2 && !strcmp("wash_path", g_argv[0])) {
             char *new_path = malloc(MAX_CMD_LENGTH);
             memset(new_path, 0, MAX_CMD_LENGTH);

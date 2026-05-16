@@ -184,3 +184,11 @@ void buildin_ls(int argc, char *argv[]) {
         printf("ls not support %s\n", argv[1]);
     }
 }
+
+void buildin_ps(int argc, char *argv[]) {
+    if (argc > 1) {
+        printf("ps not support %s\n", argv[1]);
+        return;
+    }
+    ps();
+}

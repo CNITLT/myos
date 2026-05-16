@@ -23,4 +23,9 @@ void buildin_cd(int argc, char *argv[]);
  * @brief shell内建命令，列出当前目录项
 */
 void buildin_ls(int argc, char *argv[]);
+
+/*
+ * @brief shell内建命令，打印当前所有的进程信息
+*/
+void buildin_ps(int argc, char *argv[]);
 #endif
