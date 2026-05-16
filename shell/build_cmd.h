@@ -9,4 +9,18 @@
 */
 void wash_path(char *old_path, char *new_path);
 
+/*
+ * @brief shell内建命令，打印当前目录
+*/
+void buildin_pwd(int argc, char *argv[]);
+
+/*
+ * @brief shell内建命令，切换目录
+*/
+void buildin_cd(int argc, char *argv[]);
+
+/*
+ * @brief shell内建命令，列出当前目录项
+*/
+void buildin_ls(int argc, char *argv[]);
 #endif

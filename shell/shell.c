@@ -125,15 +125,24 @@ void my_shell() {
         }
         cmd_parse();
         // debug_parse();
+        if (!g_argv[0]) {
+            continue;
+        }
 
-        if (g_argv[0] && g_argc == 1 && !strcmp("ps", g_argv[0])) {
+        if (g_argc == 1 && !strcmp("ps", g_argv[0])) {
             ps();
-        } else if (g_argv[0] && g_argc == 2 && !strcmp("wash_path", g_argv[0])) {
+        } else if (g_argc == 2 && !strcmp("wash_path", g_argv[0])) {
             char *new_path = malloc(MAX_CMD_LENGTH);
             memset(new_path, 0, MAX_CMD_LENGTH);
             wash_path(g_argv[1], new_path);
             printf("wash_path %s to %s\n",g_argv[1], new_path);
             free(new_path);
+        } else if(!strcmp("ls", g_argv[0])) {
+            buildin_ls(g_argc, g_argv);
+        } else if(!strcmp("pwd", g_argv[0])) {
+            buildin_pwd(g_argc,g_argv);
+        } else if(!strcmp("cd", g_argv[0])) {
+            buildin_cd(g_argc, g_argv);
         }
     }
 }

@@ -292,7 +292,7 @@ int search_file(const char *path, struct Path_search_record *p_searched_record) 
     assert(p_searched_record != NULL);
     memset(p_searched_record, 0, sizeof(struct Path_search_record));
     if (!strcmp(path, "/") || !strcmp(path, "/.") || !strcmp(path, "/..")) {
-        printf("search_file search target:%s is root dir cmp:%d %d %d\n",path, strcmp(path, "/"), strcmp(path, "/."), strcmp(path, "/.."));
+        // printf("search_file search target:%s is root dir cmp:%d %d %d\n",path, strcmp(path, "/"), strcmp(path, "/."), strcmp(path, "/.."));
         // 根目录及不存在的根目录的父目录的情况
         p_searched_record->p_parent_dir = &g_root_dir;
         p_searched_record->file_type = FT_DIRECTORY;
@@ -991,7 +991,7 @@ int32_t sys_stat(const char *path, struct Stat *p_stat) {
     int res = -1;
     do {
         if (!is_found) {
-            printf("%s path:%s is not found\n",path);
+            printf("%s path:%s is not found\n",__FILE__, path);
             break;
         }
 
