@@ -28,4 +28,31 @@ void buildin_ls(int argc, char *argv[]);
  * @brief shell内建命令，打印当前所有的进程信息
 */
 void buildin_ps(int argc, char *argv[]);
+
+
+/*
+ * @brief shell内建命令，清空当前屏幕
+*/
+void buildin_clear(int argc, char *argv[]);
+
+
+/*
+ * @brief shell内建命令，创建目录
+*/
+void buildin_mkdir(int argc, char *argv[]);
+
+
+
+/*
+ * @brief shell内建命令，删除目录
+*/
+void buildin_rmdir(int argc, char *argv[]);
+
+
+
+/*
+ * @brief shell内建命令，删除文件
+*/
+void buildin_rm(int argc, char *argv[]);
+
 #endif

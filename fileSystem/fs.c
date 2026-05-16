@@ -845,6 +845,10 @@ int32_t sys_rmdir(const char *path) {
             printf("sys_rmdir path %s search_dir_entry faild\n", path);
             break;
         }
+        if (!strcmp(".", dir_entry.fileName) || !strcmp("..", dir_entry.fileName) ){
+            printf("sys_rmdir path %s can not delete\n", path);
+            break;
+        }
         res = dir_delete(p_path_search_record->p_parent_dir, &dir_entry, NULL);
         res = res ? 0 : -1;
     }while(0);
@@ -938,7 +942,13 @@ char *sys_getcwd(char *buff, size_t size) {
         }
         next += child_len;
         inode_no = parent_inode_no;
+        parent_inode_no = get_parent_inode_no(inode_no);
     }
+
+    if (enable_debug) {
+        printf("debug %s reversed buff:%s\n",__FILE__,buff);
+    }
+
     int len = strlen(buff);
     assert(len < MAX_PATH_LENGTH && len > 0);
     // 这里的话，buff里面是反着的，需要摆弄正 如果正确的顺序是/a/b/c, 此时里面是/c/b/a
@@ -963,6 +973,7 @@ char *sys_getcwd(char *buff, size_t size) {
         *t_next = '/';
         t_next++;
         memcpy(t_next, next + 1, part_len);
+        t_next += part_len;
     }
     memcpy(buff, temp_buff, len);
     free(temp_buff);
@@ -976,6 +987,7 @@ int32_t sys_chdir(const char *path) {
         return -1;
     }
     struct task_struct *pcb = get_current_pcb();
+    // printf("%s sys_opendir %s pcb->cwd_ino:%d inode:%d \n", __FILE__, path,  pcb->current_workdir_inode_no,  p_dir->p_inode->i_no);
     pcb->current_workdir_inode_no = p_dir->p_inode->i_no;
     dir_close(p_dir);
     return 0;

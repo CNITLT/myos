@@ -158,6 +158,16 @@ void my_shell() {
         } else if(!strcmp("cd", g_argv[0])) {
             buildin_cd(g_argc, g_argv);
             flush_cwd_name_cache();
+        } else if(!strcmp("clear", g_argv[0])) {
+            buildin_clear(g_argc, g_argv);
+        } else if(!strcmp("mkdir", g_argv[0])) {
+            buildin_mkdir(g_argc, g_argv);
+        } else if(!strcmp("rmdir", g_argv[0])) {
+            buildin_rmdir(g_argc, g_argv);
+        } else if(!strcmp("rm", g_argv[0])) {
+            buildin_rm(g_argc, g_argv);
+        } else {
+            printf("shell not found cmd:%s\n", g_argv[0]);
         }
     }
 }

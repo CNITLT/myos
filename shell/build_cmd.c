@@ -99,6 +99,7 @@ void buildin_cd(int argc, char *argv[]) {
         chdir("/");
     } else {
         char *buff = get_target_absolute_path(argv[1]);
+        // printf("debug buildin_cd buff:%s\n",buff);
         chdir(buff);
         free(buff);
     }
@@ -191,4 +192,56 @@ void buildin_ps(int argc, char *argv[]) {
         return;
     }
     ps();
+}
+
+
+void buildin_clear(int argc, char *argv[]) {
+    if (argc > 1) {
+        printf("clear not support %s \n", argv[1]);
+        return;
+    }
+    clear_screen();
+}
+
+
+/*
+ * @brief shell内建命令，创建目录
+*/
+void buildin_mkdir(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("mkdir error not dir name");
+        return;
+    } else if (argc > 2) {
+        printf("mkdir error too much param %s\n", argv[2]);
+        return;
+    }  
+    char *abs_path = get_target_absolute_path(argv[1]);
+    sys_mkdir(abs_path);
+    free(abs_path);
+}
+
+
+
+/*
+ * @brief shell内建命令，删除目录
+*/
+void buildin_rmdir(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("rmdir error not dir name");
+        return;
+    } else if (argc > 2) {
+        printf("rmdir error too much param %s\n", argv[2]);
+        return;
+    }  
+    char *abs_path = get_target_absolute_path(argv[1]);
+    sys_rmdir(abs_path);
+    free(abs_path);
+}
+
+
+/*
+ * @brief shell内建命令，删除文件
+*/
+void buildin_rm(int argc, char *argv[]) {
+
 }
