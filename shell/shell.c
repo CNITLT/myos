@@ -5,6 +5,7 @@
 #include "syscall.h"
 #include "file.h"
 #include "keyboard.h"
+#include "build_cmd.h"
 
 // shell 单次最大的键入字符
 #define MAX_CMD_LENGTH 512
@@ -127,6 +128,12 @@ void my_shell() {
 
         if (g_argv[0] && g_argc == 1 && !strcmp("ps", g_argv[0])) {
             ps();
+        } else if (g_argv[0] && g_argc == 2 && !strcmp("wash_path", g_argv[0])) {
+            char *new_path = malloc(MAX_CMD_LENGTH);
+            memset(new_path, 0, MAX_CMD_LENGTH);
+            wash_path(g_argv[1], new_path);
+            printf("wash_path %s to %s\n",g_argv[1], new_path);
+            free(new_path);
         }
     }
 }

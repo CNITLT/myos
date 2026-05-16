@@ -252,6 +252,9 @@ void load_default_partition() {
 }
 
 char *path_parse(char *path, char *top_name_buff) {
+    if (path == NULL || top_name_buff == NULL) {
+        return;
+    }
     if (path[0] == '/') {
         while(*(++path) == '/');
     }
