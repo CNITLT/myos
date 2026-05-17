@@ -71,14 +71,14 @@ bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint
         int read_in_once = sys_read(fd, buff, MIN(BLOCK_SIZE, filesz - read_count));
         if (read_in_once <= 0) {
             sys_free_in_kernel(buff);
-            printf("%s read_in_once false \n",__FILE__, read_in_once);
+            printf("%s read_in_once false, ret:%d\n", __FILE__, read_in_once);
             return false;
         }
         memcpy((void*)(vaddr + read_count), buff, read_in_once);
         read_count += read_in_once;
     }
     
-    sys_free_in_kernel(BLOCK_SIZE);
+    sys_free_in_kernel(buff);
     page_dir_activate(pcb);
     return true;
 }
