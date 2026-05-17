@@ -3,13 +3,15 @@
 #include "fs.h"
 #include "page.h"
 #include "debug.h"
+#include "elf32.h"
+#include "process.h"
 
 int sys_exec(const char* path, char* const argv[]) {
     // 空实现，暂时返回-1表示未实现
     return -1;
 }
 
-bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) {
+bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) {
     const bool enable_debug = false;
     uint32_t vaddr_start_page = vaddr & 0xFFFFF000;
     uint32_t start_in_page = vaddr - vaddr_start_page;
@@ -17,9 +19,11 @@ bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) 
     uint32_t vaddr_end_page = (vaddr + filesz) & 0xFFFFF000;
     uint32_t page_count = (vaddr_end_page - vaddr_start_page) / PAGE_SIZE + 1;
     // 然后开始分配页
-    struct task_struct *pcb = get_current_pcb();
     uint32_t page_attr = PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER;
     // 先检查页是否存在
+    struct task_struct *pcb = get_current_pcb();
+    // 切换页表
+    page_dir_activate(new_pcb);
     for (int i = 0; i < page_count; i++) {
         // 对不存在的页开始分配
         uint32_t user_page_vaddr = vaddr_start_page + i * PAGE_SIZE;
@@ -27,11 +31,13 @@ bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) 
         
         // 没有对应的页表，映射一个页表， 存在的话把也权限全开了，不搞什么只读的，怎方便怎么来
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
-            vaddr_t res = malloc_page_core(user_page_vaddr, 1, &pcb->vmemory_pool, PAGE_DIR_VADDR, page_attr);
+            vaddr_t res = malloc_page_core(user_page_vaddr, 1, &new_pcb->vmemory_pool, PAGE_DIR_VADDR, page_attr);
             if (res == NULL) {
                 printf("%s malloc_page_core vaddr:0x%x false \n", __FILE__, user_page_vaddr);
                 return false;
             }
+            // 分配页成功，地址必须匹配，不然视为失败，可能原因是一开始用户进程非空
+            assert(res == user_page_vaddr);
             continue;
         } else {
              uint32_t* p_uint32_page_dir_entry = (uint32_t*)p_page_dir_entry;
@@ -41,12 +47,12 @@ bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) 
 
         page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
         if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
-            vaddr_t res = malloc_page_core(user_page_vaddr, 1, &pcb->vmemory_pool, PAGE_DIR_VADDR, page_attr);
+            vaddr_t res = malloc_page_core(user_page_vaddr, 1, &new_pcb->vmemory_pool, PAGE_DIR_VADDR, page_attr);
              if (res == NULL) {
                 printf("%s malloc_page_core vaddr:0x%x false \n", __FILE__, user_page_vaddr);
                 return false;
             }
-            assert(res);
+            assert(res == user_page_vaddr);
         } else {
             uint32_t* p_uint32_page_table_entry = (uint32_t*)p_page_table_entry;
             *p_uint32_page_table_entry &= 0xFFFFF000;
@@ -54,7 +60,7 @@ bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) 
         }
     }
     // 重新激活刷新下硬件缓存
-    page_dir_activate(pcb);
+    page_dir_activate(new_pcb);
 
     // 然后读取文件内容开始复制
     sys_lseek(fd, offset, SEEK_SET);
@@ -73,4 +79,70 @@ bool segment_load(int32_t fd, uint32_t offset, uint32_t filesz, uint32_t vaddr) 
     }
     
     sys_free_in_kernel(BLOCK_SIZE);
+    page_dir_activate(pcb);
+    return true;
+}
+
+
+struct task_struct *sys_load(const char * path) {
+    int fd = sys_open(path, O_RD_ONLY);
+    if (fd == -1) {
+        return NULL;
+    }
+    // 先检测是否是elf32的可执行文件
+    struct Elf32_Ehdr elf_header = {0};
+    memset(&elf_header, 0, sizeof(struct Elf32_Ehdr));
+    int read_count = sys_read(fd, &elf_header, sizeof(struct Elf32_Ehdr));
+    if (read_count != sizeof(struct Elf32_Ehdr)) {
+        sys_close(fd);
+        return NULL;
+    }
+
+    // 检查下ELF头是否正确
+     if (memcmp(elf_header.e_ident, "\177ELF\1\1\1", 7) \
+      || elf_header.e_type != 2 \
+      || elf_header.e_machine != 3 \
+      || elf_header.e_version != 1 \
+      || elf_header.e_phnum > 1024 \
+      || elf_header.e_phentsize != sizeof(struct Elf32_Phdr)) {
+        sys_close(fd);
+        return NULL;
+   }
+
+   // 准备一个新的pcb用做加载
+    struct task_struct* new_pcb = malloc_kernel_page(1);
+    //初始化PCB信息
+    init_pcb(new_pcb, "load", USER_PROCESS_DEFAULT_PRIOR); 
+    user_vmemory_pool_init(&new_pcb->vmemory_pool);
+    mem_block_desc_array_init(&new_pcb->u_block_desc);
+    //页表创建
+    new_pcb->page_dir = create_page_dir();
+    thread_create(new_pcb, start_process, elf_header.e_entry);
+    // 遍历所有程序段, 将可加载的加载到内存中
+    struct Elf32_Phdr prog_header = {0};
+    Elf32_Off prog_header_offset = elf_header.e_phoff;
+    Elf32_Half prog_header_size = elf_header.e_phentsize;
+    Elf32_Half prog_header_count = elf_header.e_phnum;
+
+    for (int i = 0; i < prog_header_count; i++) {
+            memset(&prog_header, 0 , sizeof(struct Elf32_Phdr));
+            sys_lseek(fd, prog_header_offset + i * prog_header_size, SEEK_SET);
+            int read_count = sys_read(fd, &prog_header, sizeof(struct Elf32_Phdr));
+            if (read_count != sizeof(struct Elf32_Phdr)) {
+                sys_close(fd);
+                free_kernel_page(new_pcb, 1);
+                return NULL;
+            }
+            
+            if (prog_header.p_type == PT_LOAD) {
+                if (!segment_load(new_pcb, fd, prog_header.p_offset, prog_header.p_filesz, prog_header.p_vaddr)) {
+                    sys_close(fd);
+                    free_kernel_page(new_pcb, 1);
+                    return NULL;
+                }
+            }
+    }
+
+    sys_close(fd);
+    return new_pcb;
 }

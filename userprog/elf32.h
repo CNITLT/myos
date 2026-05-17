@@ -77,7 +77,7 @@ typedef uint32_t Elf32_Half;
 #define SHF_MASKPROC     0xF0000000 /* 处理器特定标志掩码 */
 
 /* ELF32 文件头 */
-typedef struct {
+typedef struct Elf32_Ehdr{
     unsigned char   e_ident[16];   /* ELF 标识 */
     Elf32_Half      e_type;        /* 文件类型 */
     Elf32_Half      e_machine;     /* 机器类型 */
@@ -107,7 +107,7 @@ typedef struct Elf32_Phdr{
 } Elf32_Phdr;
 
 /* ELF32 节头 */
-typedef struct {
+typedef struct Elf32_Shdr{
     Elf32_Word sh_name;      /* 节名索引（在节名字符串表中） */
     Elf32_Word sh_type;      /* 节类型 */
     Elf32_Word sh_flags;     /* 节标志 */

@@ -133,6 +133,13 @@ int32_t sys_read(int32_t fd, void *data, size_t count);
 int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence);
 
 /*
+ * @brief 关闭文件描述符
+ * @param local_fd_index: int32_t : 进程级文件描述符索引
+ * @return 成功返回0， 否则-1
+*/
+int32_t sys_close(int32_t local_fd_index);
+
+/*
  * @brief 删除非目录类型的文件
  * @param path: const char *: 文件路径
  * @return 成功返回0， 否则-1
