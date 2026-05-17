@@ -104,7 +104,7 @@ void pfree_page(paddr_t paddr, size_t page_count);
 
 /*
 @brief 分配指定数量的物理内存页和虚拟内存页并建立映射关系
-@param start_vaddr:vaddr_t: 虚拟地址的分配起点, 传入堆的起点就行
+@param start_vaddr:vaddr_t: 虚拟地址的分配起点, 视需要传入不同的值
 @param page_count:size_t: 分配的页数量
 @param p_vmemory_pool:memory_pool*:进程对应的虚拟内存池
 @param page_dir:vaddr_t: 进程对应的页目录虚拟地址 (PAGE_DIR_VADDR或者是KERNEL_PAGE_DIR_VADDR)

@@ -243,5 +243,6 @@ void buildin_rmdir(int argc, char *argv[]) {
  * @brief shell内建命令，删除文件
 */
 void buildin_rm(int argc, char *argv[]) {
-
+    // TOOD:之后搞把，目前只有目录
+    printf("cmd rm comming soon\n");
 }
