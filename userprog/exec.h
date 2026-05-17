@@ -6,12 +6,12 @@
 #include "elf32.h"
 
 /*
- * @brief 执行一个新的程序，替换当前进程的内存映像
+ * @brief 执行一个新的程序，替换当前进程的内存映像, 如果成功，当前程序会被替换为新程序，如果失败，当前程序会继续执行
  * @param path: 程序路径
  * @param argv: 参数数组
  * @return 成功返回0，失败返回-1
  */
-int sys_exec(const char* path, char* const argv[]);
+int sys_execv(const char* path, char* const argv[]);
 
 /*
  * @brief 将文件描述符指向的文件偏移为offset大小的数据加载到虚拟地址vaddr, 使用前的一开始的用户进程空间基本上应该是空的，或者说要加载段的地方没有被分配

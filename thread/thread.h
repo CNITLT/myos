@@ -7,6 +7,7 @@
 #define STACK_OVERFLOW_MAGIC_NUM 0xCCCCCCCC
 // 单个进程最大的文件描述符个数
 #define MAX_FILES_OPEN_PER_PROC 8
+#define TASK_NAME_LENGTH 16
 //通用线程函数类型
 typedef void thread_func(void*);
 //该类型的指针
@@ -92,7 +93,7 @@ struct task_struct {
    struct mem_block_desc u_block_desc[BLOCK_DESC_SIZE];
    enum task_status status;
    uint8_t priority;		 // 线程优先级, 目前的用法，越大优先级越高
-   char name[16];
+   char name[TASK_NAME_LENGTH];
 
    uint8_t ticks;//剩余可运行的时钟滴答数
    uint32_t elapsed_ticks;//总共运行了的时种滴答数

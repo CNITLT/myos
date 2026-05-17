@@ -9,6 +9,11 @@
 */
 void wash_path(char *old_path, char *new_path);
 
+// 如果本身是绝对路径，则返回清洗后的
+// 如果是相对路径，则先拼接当前工作目录，然后返回清洗后的
+// 返回值需要外部释放
+char *get_target_absolute_path(char *argv_path);
+
 /*
  * @brief shell内建命令，打印当前目录
 */
