@@ -339,7 +339,9 @@ void main_thread_func(void *args){
     
     free(buff);
     
-    my_shell();
+
+    process_execute(my_shell, "my_shell");
+    // my_shell();
     // process_execute(test_fork, "test_fork");
     // int res = sys_mkdir("/a");
     // printf("call sys_mkdir res:%d\n", res);

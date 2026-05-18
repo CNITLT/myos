@@ -13,8 +13,9 @@ int sys_execv(const char* path, char* const argv[]) {
     while(argv[argc]) {
         argc++;
     }
+    uint32_t entry_point = 0;
     char *abs_path = get_target_absolute_path(path);
-    struct task_struct* new_pcb = sys_load(abs_path);
+    struct task_struct* new_pcb = sys_load(abs_path, &entry_point);
     if (new_pcb == NULL) {
         free(abs_path);
         return -1;
@@ -25,18 +26,12 @@ int sys_execv(const char* path, char* const argv[]) {
     
     memcpy(pcb->name, name, strlen(name));
     pcb->name[TASK_NAME_LENGTH - 1] = 0;
-    // 获取新的函数地址
-    new_pcb->self_kernel_stack = (uint32_t)new_pcb->self_kernel_stack - sizeof(struct interrupt_stack) - sizeof(struct thread_stack);
-    struct thread_stack* stack = pcb->self_kernel_stack;
-    // sys_load存这里面了
-    uint32_t entry_point = stack->func_arg;
-
     // TODO:构建中断栈, 这里的逻辑应该要改下, 之前就魔改过，再对着书上来可能有问题
     struct interrupt_stack *p_intr_stack = (struct interrupt_stack *)((uint32_t)pcb + PAGE_SIZE - sizeof(struct interrupt_stack));
     p_intr_stack->ebx = (uint32_t)argv;
     p_intr_stack->ecx = argc;
     p_intr_stack->eip = entry_point;
-    p_intr_stack->esp = (void *)USER_STACK3_VADDR_END;
+    p_intr_stack->esp = (void *)(USER_STACK3_VADDR + PAGE_SIZE - 16);
     free(abs_path);
     free_kernel_page(new_pcb, 1);
     // 直接从中断返回
@@ -117,7 +112,7 @@ bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint
 }
 
 
-struct task_struct *sys_load(const char * path) {
+struct task_struct *sys_load(const char * path, uint32_t *p_entry_point) {
     int fd = sys_open(path, O_RD_ONLY);
     if (fd == -1) {
         return NULL;
@@ -177,5 +172,8 @@ struct task_struct *sys_load(const char * path) {
     }
 
     sys_close(fd);
+    if (p_entry_point) {
+        *p_entry_point = elf_header.e_entry;
+    }
     return new_pcb;
 }

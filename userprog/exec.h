@@ -27,7 +27,8 @@ bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint
 /*
  * @brief 加载可执行文件，但不执行，返回加载后的进程控制块
  * @param path: 可执行文件路径
+ * @param p_entry_point: 可执行文件的入口地址
  * @return 成功返回进程控制块指针，失败返回NULL
 */
-struct task_struct *sys_load(const char * path);
+struct task_struct *sys_load(const char * path, uint32_t *p_entry_point);
 #endif

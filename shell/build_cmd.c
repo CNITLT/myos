@@ -121,7 +121,7 @@ void buildin_ls(int argc, char *argv[]) {
         struct Dir_entry *p_dir_entry = NULL;
         char *buff = malloc(17);
         assert(buff);
-        while(p_dir_entry = dir_read(p_dir)) {
+        while(p_dir_entry = readdir(p_dir)) {
             memset(buff,' ' ,17);
             memcpy(buff, p_dir_entry->fileName, strlen(p_dir_entry->fileName));
             printf("%s", buff);
@@ -139,7 +139,7 @@ void buildin_ls(int argc, char *argv[]) {
         char *buff = malloc(17);
         assert(buff);
         char *entry_path = malloc(MAX_PATH_LENGTH);
-        while(p_dir_entry = dir_read(p_dir)) {
+        while(p_dir_entry = readdir(p_dir)) {
             // 类型 dir 和 file
             memset(buff,0 ,17);
             memset(buff,' ',8);
