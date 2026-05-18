@@ -6,7 +6,9 @@
 #include "file.h"
 #include "keyboard.h"
 #include "build_cmd.h"
-
+#include "fs.h"
+#include "syscall.h"
+#include "exec.h"
 // shell 单次最大的键入字符
 #define MAX_CMD_LENGTH 512
 // 加上命令本身的最大参数个数
@@ -189,7 +191,29 @@ static void execute_cmd(void)
     else
     {
         // 从磁盘上找
-        printf("shell not found cmd:%s\n", g_argv[0]);
+        char *cmd_path = get_target_absolute_path(g_argv[0]);
+        int fd = open(cmd_path, O_RD_ONLY);
+        if (fd == -1) {
+            printf("shell not found cmd:%s\n", g_argv[0]);
+            return;
+        }
+        else {
+            // 执行找到的命令
+            pid_t pid = fork();
+            if (pid == -1) {
+                printf("shell exec cmd:%s faild\n", g_argv[0]);
+                return;
+            } 
+
+            if (pid) {
+                // 父进程
+                // TODO:先卡死，之后再改为wait
+                while(1);
+            } else {
+                // 子进程
+                execv(cmd_path, g_argv);
+            }
+        }
     }
 }
 void my_shell()

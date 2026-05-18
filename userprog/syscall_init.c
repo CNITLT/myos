@@ -5,6 +5,7 @@
 #include "fs.h"
 #include "fork.h"
 #include "thread.h"
+#include "exec.h"
 syscall_addr syscall_table[SYSCALL_SIZE] = {NULL};
 /*
 默认系统调用中断，还是只打印一句话
@@ -24,6 +25,8 @@ void syscall_init(){
     syscall_table[SYS_WRITE] = sys_write;
     syscall_table[SYS_READ] = sys_read;
     syscall_table[SYS_LSEEK] = sys_lseek;
+    syscall_table[SYS_OPEN] = sys_open;
+    syscall_table[SYS_CLOSE] = sys_close;
     syscall_table[SYS_UNLINK] = sys_unlink;
     syscall_table[SYS_OPENDIR] = sys_opendir;
     syscall_table[SYS_CLOSEDIR] = sys_closedir;
@@ -35,6 +38,7 @@ void syscall_init(){
     syscall_table[SYS_STAT] = sys_stat;
     syscall_table[SYS_FORK] = sys_fork;
     syscall_table[SYS_PS] = sys_ps;
+    syscall_table[SYS_EXECV] = sys_execv;
 }
 
 pid_t sys_getpid(void){

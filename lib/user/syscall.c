@@ -40,6 +40,14 @@ int32_t lseek(int32_t fd, int32_t offset, uint8_t whence) {
     return syscall(SYS_LSEEK, fd, offset, whence);
 }
 
+int32_t open(const char *path, uint8_t flags) {
+    return syscall(SYS_OPEN, path, flags);
+}
+
+int32_t close(int32_t fd) {
+    return syscall(SYS_CLOSE, fd);
+}
+
 int32_t unlink(const char *path) {
     return syscall(SYS_UNLINK, path);
 }
@@ -85,6 +93,11 @@ int32_t stat(const char *path, struct Stat *p_stat) {
 pid_t fork() {
     return syscall(SYS_FORK);
 }
+
+int32_t execv(const char* path, char* const argv[]) {
+    return syscall(SYS_EXECV, path, argv);
+}
+
 
 void ps() {
     syscall(SYS_PS);

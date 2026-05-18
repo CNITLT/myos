@@ -13,6 +13,8 @@ enum SYSCALL_NR {
     SYS_WRITE,
     SYS_READ,
     SYS_LSEEK,
+    SYS_OPEN,
+    SYS_CLOSE,
     SYS_UNLINK,
     SYS_OPENDIR,
     SYS_CLOSEDIR,
@@ -23,7 +25,8 @@ enum SYSCALL_NR {
     SYS_CHDIR,
     SYS_STAT,
     SYS_FORK,
-    SYS_PS
+    SYS_PS,
+    SYS_EXECV
  };
 /*
 @brief 用户态的系统调用入口
@@ -83,6 +86,21 @@ int32_t read(int32_t fd, const void *data, size_t count);
  * @return int32_t 新的游标位置, 失败返回-1
 */
 int32_t lseek(int32_t fd, int32_t offset, uint8_t whence);
+
+/*
+ * @brief 打开或创建文件
+ * @param path: const char *: 文件绝对路径
+ * @param flags: uint8_t: 对应的操作权限
+ * @return int32_t 进程级文件描述符，失败返回-1
+*/
+int32_t open(const char *path, uint8_t flags);
+
+/*
+ * @brief 关闭文件描述符
+ * @param fd: int32_t : 待关闭的文件描述符索引
+ * @return 成功返回0， 否则-1
+*/
+int32_t close(int32_t fd);
 
 /*
  * @brief 删除非目录类型的文件
@@ -154,6 +172,15 @@ int32_t stat(const char *path, struct Stat *p_stat);
  * @brief 复制一个子进程，父进程返回子进程pid, 子进程返回0， 失败返回-1
 */
 pid_t fork();
+
+/*
+ * @brief 执行一个新的程序，替换当前进程的内存映像
+ * @param path: 程序路径
+ * @param argv: 参数数组
+ * @return 成功返回0，失败返回-1
+*/
+int32_t execv(const char* path, char* const argv[]);
+
 
 /*
  * @brief 打印所有进程信息
