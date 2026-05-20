@@ -13,6 +13,7 @@
 #include "fs.h"
 #include "dir.h"
 #include "inode.h"
+#include "shell.h"
 void init_all(){
     interrupt_state old_state = close_interrupt();
     
@@ -33,4 +34,5 @@ void init_other_in_main_thread(){
     fileSystem_init();
     load_default_partition();
     open_root_dir(g_current_part);
+    init_user_command();
 }

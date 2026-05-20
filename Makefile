@@ -20,6 +20,8 @@ all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/ker
 	$(dd) if=$(BUILD_DIR)/kernel.bin count=400 seek=9
 	readelf -h $(BUILD_DIR)/kernel.bin | grep 入口点
 	rm -rf c.img.lock
+	cd ./command && make && cd ..
+	
 	
 .PHONY:make_build_dir
 make_build_dir:

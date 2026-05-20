@@ -239,3 +239,16 @@ void my_shell()
         execute_cmd();
     }
 }
+
+
+void init_user_command() {
+    Byte *buff = sys_malloc(BLOCK_SIZE);
+    int32_t fd = sys_open("/prog", O_CREAT | O_RDWR);
+    for (int i = 500; i < 500 + 400; i++) {
+        printf("%s Reading block %d\n",__FILE__, i);
+        ide_read(&g_ide_channels[0].devices[0], i, buff, 1);
+        sys_write(fd, buff, BLOCK_SIZE);
+    }
+    sys_close(fd);
+    sys_free(buff);
+}
