@@ -50,13 +50,16 @@ bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint
     uint32_t page_attr = PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER;
     // 先检查页是否存在
     struct task_struct *pcb = get_current_pcb();
+
     // 切换页表
     page_dir_activate(new_pcb);
     for (int i = 0; i < page_count; i++) {
         // 对不存在的页开始分配
         uint32_t user_page_vaddr = vaddr_start_page + i * PAGE_SIZE;
         page *p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
-        
+        if (enable_debug) {
+            printf("%s i:%d user_page_vaddr:0x%x\n", __FILE__, i, user_page_vaddr);
+        }
         // 没有对应的页表，映射一个页表， 存在的话把也权限全开了，不搞什么只读的，怎方便怎么来
         if(p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST){
             vaddr_t res = malloc_page_core(user_page_vaddr, 1, &new_pcb->vmemory_pool, PAGE_DIR_VADDR, page_attr);

@@ -20,6 +20,7 @@ void inode_locate(struct Partition *p_part, uint32_t inode_no, struct Inode_posi
 }
 
 void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) {
+    bool enable_debug = false;
     assert(p_part && p_inode);
     bool need_free = false;
     if (!io_buff) {
@@ -28,6 +29,9 @@ void inode_sync(struct Partition *p_part, struct Inode *p_inode, void *io_buff) 
     }
     struct Inode_position inode_pos;
     inode_locate(p_part, p_inode->i_no, &inode_pos);
+    if (enable_debug) {
+        printf("%s inode_pos.section_lba:%d \n", __FILE__, inode_pos.section_lba );
+    }
     ide_read(p_part->p_disk, inode_pos.section_lba, io_buff, inode_pos.is_in_two_section ? 2 : 1);
     struct Inode *p_inode_in_disk = (struct Inode *)((Byte *)io_buff + inode_pos.offset_in_section);
     memcpy(p_inode_in_disk, p_inode, sizeof(struct Inode));
@@ -466,6 +470,7 @@ int32_t read_data_from_inode(struct Partition* p_part, struct Inode *p_inode, ui
 
 
 int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uint32_t *p_all_block_lba, uint32_t all_block_lba_count, int32_t pos, void *data, size_t count) {
+    bool enable_debug = false;
     // printf("debug write_data_to_inode p_part:0x%x p_inode:0x%x data:0x%x\n", p_part, p_inode, data);
     assert(p_part && p_inode && data);
 
@@ -508,6 +513,9 @@ int32_t write_data_to_inode(struct Partition* p_part, struct Inode *p_inode, uin
             return write_count;
         }
         if (index_in_sector != 0 || write_size_in_once < BLOCK_SIZE) {
+            if (enable_debug) {
+                printf("%s: index_in_sector=%d, write_size_in_once=%d will ide_read lba:%d\n", index_in_sector, write_size_in_once, block_lba);
+            }
             ide_read(p_part->p_disk, block_lba, buff, 1);
         }
         memcpy(((Byte *)buff + index_in_sector), next, write_size_in_once);

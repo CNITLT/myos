@@ -243,11 +243,18 @@ void my_shell()
 
 void init_user_command() {
     Byte *buff = sys_malloc(BLOCK_SIZE);
+    sys_unlink("/prog");
     int32_t fd = sys_open("/prog", O_CREAT | O_RDWR);
+    if (fd == -1) {
+         fd = sys_open("/prog", O_RDWR);
+    }
     for (int i = 500; i < 500 + 400; i++) {
         printf("%s Reading block %d\n",__FILE__, i);
         ide_read(&g_ide_channels[0].devices[0], i, buff, 1);
-        sys_write(fd, buff, BLOCK_SIZE);
+        printf("%s i:%d will call sys_write\n",__FILE__, i);
+        int32_t ret = sys_write(fd, buff, BLOCK_SIZE);
+        printf("%s i:%d sys_write returned: 0x%x (%d)\n", __FILE__, i, ret, ret);
+        printf("%s i:%d did call sys_write\n",__FILE__, i);
     }
     sys_close(fd);
     sys_free(buff);
