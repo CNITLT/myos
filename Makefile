@@ -21,7 +21,8 @@ all:make_build_dir $(BUILD_DIR)/mbr.bin $(BUILD_DIR)/loader.bin $(BUILD_DIR)/ker
 	readelf -h $(BUILD_DIR)/kernel.bin | grep 入口点
 	rm -rf c.img.lock
 	cd ./command && make && cd ..
-	
+	cd build && objdump -S kernel.bin > kernel.asm && cd ..
+
 	
 .PHONY:make_build_dir
 make_build_dir:
