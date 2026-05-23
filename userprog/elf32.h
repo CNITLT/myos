@@ -7,7 +7,7 @@
 typedef uint32_t Elf32_Word;
 typedef uint32_t Elf32_Addr;
 typedef uint32_t Elf32_Off;
-typedef uint32_t Elf32_Half;
+typedef uint16_t Elf32_Half;
 
 /* ELF 魔数 */
 #define ELF_MAG0         0x7F
@@ -92,7 +92,7 @@ typedef struct Elf32_Ehdr{
     Elf32_Half      e_shentsize;   /* 节头表项大小 */
     Elf32_Half      e_shnum;       /* 节头表项数量 */
     Elf32_Half      e_shstrndx;    /* 节名字符串表索引 */
-} Elf32_Ehdr;
+} Elf32_Ehdr __attribute__((packed));
 
 /* ELF32 程序头 */
 typedef struct Elf32_Phdr{
@@ -104,7 +104,7 @@ typedef struct Elf32_Phdr{
     Elf32_Word p_memsz;   /* 段在内存中的大小 */
     Elf32_Word p_flags;   /* 段标志 */
     Elf32_Word p_align;   /* 段对齐 */
-} Elf32_Phdr;
+} Elf32_Phdr __attribute__((packed));;
 
 /* ELF32 节头 */
 typedef struct Elf32_Shdr{
@@ -118,6 +118,6 @@ typedef struct Elf32_Shdr{
     Elf32_Word sh_info;      /* 附加信息 */
     Elf32_Word sh_addralign; /* 节对齐 */
     Elf32_Word sh_entsize;   /* 项大小（如符号表项大小） */
-} Elf32_Shdr;
+} Elf32_Shdr __attribute__((packed));;
 
 #endif /* __USERPROG_ELF32_H */
