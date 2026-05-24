@@ -72,6 +72,9 @@ int32_t rmdir(const char *path) {
     return syscall(SYS_RMDIR, path);
 }
 
+int32_t mkdir(const char *path) {
+    return syscall(SYS_MKDIR, path);
+}
 
 char * getcwd(char *buff, size_t size) {
     return syscall(SYS_GETCWD, buff, size);
@@ -101,5 +104,4 @@ int32_t execv(const char* path, char* const argv[]) {
 
 void ps() {
     syscall(SYS_PS);
-    return 0;
 }

@@ -216,7 +216,7 @@ void buildin_mkdir(int argc, char *argv[]) {
         return;
     }  
     char *abs_path = get_target_absolute_path(argv[1]);
-    sys_mkdir(abs_path);
+    mkdir(abs_path);
     free(abs_path);
 }
 
@@ -234,7 +234,7 @@ void buildin_rmdir(int argc, char *argv[]) {
         return;
     }  
     char *abs_path = get_target_absolute_path(argv[1]);
-    sys_rmdir(abs_path);
+    rmdir(abs_path);
     free(abs_path);
 }
 

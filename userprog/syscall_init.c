@@ -39,6 +39,7 @@ void syscall_init(){
     syscall_table[SYS_FORK] = sys_fork;
     syscall_table[SYS_PS] = sys_ps;
     syscall_table[SYS_EXECV] = sys_execv;
+    syscall_table[SYS_MKDIR] = sys_mkdir;
 }
 
 pid_t sys_getpid(void){

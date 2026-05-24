@@ -26,7 +26,7 @@ void user_gdt_init(){
 }
 
 void start_process(void* filename){
-
+    const bool enable_debug = true;
     void *function = filename;
     struct task_struct* cur_pcb = get_current_pcb();
     //切换到中断栈进行操作，毕竟是进程要通过中断来跳转到用户态
@@ -44,10 +44,12 @@ void start_process(void* filename){
     p_intr_stack->esp = (uintaddr_t)malloc_page_core(USER_STACK3_VADDR,1,&cur_pcb->vmemory_pool,
           PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER) 
          + PAGE_SIZE - 16;//16是当缓冲区用的
- 
     p_intr_stack->ss = GDT_SELECTOR_USER_DATA;
     //debug("start_process end\n");
- 
+    if (enable_debug) {
+        printf("%s  p_intr_stack->esp:0x%x\n",__FILE__, p_intr_stack->esp);
+        // sleep_ms(5000);
+    }
     intr_exit_from(p_intr_stack);
 }
 

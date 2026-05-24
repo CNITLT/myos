@@ -26,7 +26,8 @@ enum SYSCALL_NR {
     SYS_STAT,
     SYS_FORK,
     SYS_PS,
-    SYS_EXECV
+    SYS_EXECV,
+    SYS_MKDIR
  };
 /*
 @brief 用户态的系统调用入口
@@ -143,6 +144,13 @@ void rewinddir(struct Dir *p_dir);
     @return 成功0， 失败-1
 */
 int32_t rmdir(const char *path);
+
+/*
+ * @brief 创建目录
+ * @param path: const char *: 目录路径
+ * @return 成功0， 失败-1
+*/
+int32_t mkdir(const char *path);
 
 /*
  * @brief 获取当前工作路径
