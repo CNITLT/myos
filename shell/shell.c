@@ -9,6 +9,7 @@
 #include "fs.h"
 #include "syscall.h"
 #include "exec.h"
+#include "page.h"
 // shell 单次最大的键入字符
 #define MAX_CMD_LENGTH 512
 // 加上命令本身的最大参数个数
@@ -193,25 +194,41 @@ static void execute_cmd(void)
         // 从磁盘上找
         char *cmd_path = get_target_absolute_path(g_argv[0]);
         int fd = open(cmd_path, O_RD_ONLY);
-        if (fd == -1) {
+        if (fd == -1)
+        {
             printf("shell not found cmd:%s\n", g_argv[0]);
             return;
         }
-        else {
+        else
+        {
             // 执行找到的命令
             pid_t pid = fork();
-            if (pid == -1) {
+            if (pid == -1)
+            {
                 printf("shell exec cmd:%s faild\n", g_argv[0]);
                 return;
-            } 
+            }
 
-            if (pid) {
+            if (pid)
+            {
                 // 父进程
                 // TODO:先卡死，之后再改为wait
-                while(1);
-            } else {
+                while (1)
+                    ;
+            }
+            else
+            {
                 // 子进程
-                execv(cmd_path, g_argv);
+                // execv(cmd_path, g_argv);
+                printf("this is child process\n");
+                void *p = malloc(2048);
+                printf("child malloc2048 :%x\n", p);
+                free(p);
+                for (int i = 1; i < PAGE_SIZE * 4; i *= 2) {
+                    p = malloc(i);
+                    printf("child malloc%d :%x\n",i, p);
+                    free(p);
+                }
             }
         }
     }
@@ -240,21 +257,34 @@ void my_shell()
     }
 }
 
-
-void init_user_command() {
+void init_user_command()
+{
+    return;
+    const bool enable_debug = false;
     Byte *buff = sys_malloc(BLOCK_SIZE);
     sys_unlink("/prog");
     int32_t fd = sys_open("/prog", O_CREAT | O_RDWR);
-    if (fd == -1) {
-         fd = sys_open("/prog", O_RDWR);
+    if (fd == -1)
+    {
+        fd = sys_open("/prog", O_RDWR);
     }
-    for (int i = 500; i < 500 + 400; i++) {
-        printf("%s Reading block %d\n",__FILE__, i);
+    for (int i = 500; i < 500 + 400; i++)
+    {
+        if (enable_debug)
+        {
+            printf("%s Reading block %d\n", __FILE__, i);
+        }
         ide_read(&g_ide_channels[0].devices[0], i, buff, 1);
-        printf("%s i:%d will call sys_write\n",__FILE__, i);
+        if (enable_debug)
+        {
+            printf("%s i:%d will call sys_write\n", __FILE__, i);
+        }
         int32_t ret = sys_write(fd, buff, BLOCK_SIZE);
-        printf("%s i:%d sys_write returned: 0x%x (%d)\n", __FILE__, i, ret, ret);
-        printf("%s i:%d did call sys_write\n",__FILE__, i);
+        if (enable_debug)
+        {
+            printf("%s i:%d sys_write returned: 0x%x (%d)\n", __FILE__, i, ret, ret);
+            printf("%s i:%d did call sys_write\n", __FILE__, i);
+        }
     }
     sys_close(fd);
     sys_free(buff);

@@ -9,14 +9,24 @@
 #include "build_cmd.h"
 #include "string.h"
 int sys_execv(const char* path, char* const argv[]) {
+    const bool enable_debug = true;
     int32_t argc = 0;
     while(argv[argc]) {
         argc++;
     }
     uint32_t entry_point = 0;
+    if (enable_debug) {
+        printf("%s will call get_target_absolute_path:%s\n", __FILE__, path);
+    }
     char *abs_path = get_target_absolute_path(path);
+    if (enable_debug) {
+        printf("%s will call sys_load:%s\n", __FILE__, abs_path);
+    }
     struct task_struct* new_pcb = sys_load(abs_path, &entry_point);
     if (new_pcb == NULL) {
+        if (enable_debug) {
+            printf("%s sys_load false\n", __FILE__);
+        }
         free(abs_path);
         return -1;
     }
@@ -32,8 +42,18 @@ int sys_execv(const char* path, char* const argv[]) {
     p_intr_stack->ecx = argc;
     p_intr_stack->eip = entry_point;
     p_intr_stack->esp = (void *)(USER_STACK3_VADDR + PAGE_SIZE - 16);
+    if (enable_debug) {
+        printf("%s will free abs_path:0x%x\n", __FILE__, abs_path);
+    }
     free(abs_path);
+    if (enable_debug) {
+        printf("%s will free_kernel_page new_pcb:0x%x\n", __FILE__, new_pcb);
+    }
     free_kernel_page(new_pcb, 1);
+    // block_desc重置
+    mem_block_desc_array_init(&pcb->u_block_desc);
+    // 页表切换
+    page_dir_activate(new_pcb);
     // 直接从中断返回
     intr_exit_from(p_intr_stack);
     return 0;
@@ -116,16 +136,20 @@ bool segment_load(struct task_struct *new_pcb, int32_t fd, uint32_t offset, uint
 
 
 struct task_struct *sys_load(const char * path, uint32_t *p_entry_point) {
+    const bool enable_debug = true;
     int fd = sys_open(path, O_RD_ONLY);
     if (fd == -1) {
+        printf("%s Failed to open file: %s\n",__FILE__, path);
         return NULL;
     }
     // 先检测是否是elf32的可执行文件
     struct Elf32_Ehdr elf_header = {0};
     memset(&elf_header, 0, sizeof(struct Elf32_Ehdr));
+    sys_lseek(fd, 0, SEEK_SET);
     int read_count = sys_read(fd, &elf_header, sizeof(struct Elf32_Ehdr));
     if (read_count != sizeof(struct Elf32_Ehdr)) {
         sys_close(fd);
+        printf("%s read_count != sizeof(struct Elf32_Ehdr)\n", __FILE__);
         return NULL;
     }
 
@@ -137,6 +161,17 @@ struct task_struct *sys_load(const char * path, uint32_t *p_entry_point) {
       || elf_header.e_phnum > 1024 \
       || elf_header.e_phentsize != sizeof(struct Elf32_Phdr)) {
         sys_close(fd);
+        printf("%s is not right ELFHeader\n", __FILE__); 
+        printf("e_ident:%s\n", elf_header.e_ident);
+
+        printf("e_type:0x%x\n", elf_header.e_type);
+
+        printf("e_machine:0x%x\n", elf_header.e_machine);
+        printf("e_version:0x%x\n", elf_header.e_version);
+
+        printf("e_phnum:0x%x\n", elf_header.e_phnum);
+
+        printf("e_phentsize:0x%x\n", elf_header.e_phentsize);
         return NULL;
    }
 
@@ -162,6 +197,7 @@ struct task_struct *sys_load(const char * path, uint32_t *p_entry_point) {
             if (read_count != sizeof(struct Elf32_Phdr)) {
                 sys_close(fd);
                 free_kernel_page(new_pcb, 1);
+                printf("%s read_count != sizeof(struct Elf32_Phdr)\n", __FILE__);
                 return NULL;
             }
             
@@ -169,6 +205,7 @@ struct task_struct *sys_load(const char * path, uint32_t *p_entry_point) {
                 if (!segment_load(new_pcb, fd, prog_header.p_offset, prog_header.p_filesz, prog_header.p_vaddr)) {
                     sys_close(fd);
                     free_kernel_page(new_pcb, 1);
+                    printf("%s segment_load p_offset:0x%x p_filesz:%d p_vaddr:0x%x\n", __FILE__, prog_header.p_offset, prog_header.p_filesz, prog_header.p_vaddr);
                     return NULL;
                 }
             }

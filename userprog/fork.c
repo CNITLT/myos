@@ -8,6 +8,7 @@
 #include "process.h"
 #include "page.h"
 #include "stddef.h"
+
 void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
     assert(child_pcb && parent_pcb);
     assert(is_user_thread(parent_pcb));
@@ -30,7 +31,10 @@ void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct 
     child_pcb->all_list_tag.prev = NULL;
     
     // 我理解下应该不需要初始化，fork来的话，页表也是复制的
+    // 确实不需要初始化，但是由于内部的部分指针值得的是PCB里面的，1.要不就遍历一下进行调整，2. 要不就偷懒直接初始化，内存漏就漏了
+    // 这里在复制完用户空间后进行下调整，这里还是不进行初始化
     // mem_block_desc_array_init(&child_pcb->u_block_desc);
+
     // 用户态的不需要，虚拟的用户空间可以实现堆的复制，操作的是不同的物理内存
     // fd_table，等于是重新打开了一份，给+1
     for (int i = USED_FD_START_INDEX; i < MAX_FILES_OPEN_PER_PROC; i++) {
@@ -61,7 +65,7 @@ void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct 
 void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
     assert(child_pcb && parent_pcb);
     assert(is_user_thread(parent_pcb));
-    const bool enable_debug = false;
+    const bool enable_debug = true;
     // 如果是用户进程的话vmemory_pool在copy_pcb以及复制过了，这里只需要管数据和页表即可
     // 分配一个页用于数据中转
     Byte *page_buff = sys_malloc_in_kernel(PAGE_SIZE);
@@ -79,6 +83,9 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
     }
 
     for (int i = 0;i < parent_pcb->vmemory_pool.bmap.len_bit; i++) {
+        // if (enable_debug) {
+        //     printf("%s %d/%d \n", __FILE__, i ,parent_pcb->vmemory_pool.bmap.len_bit);
+        // }
         bit_state state = bitmap_get(&parent_pcb->vmemory_pool.bmap, i);
         if (state == BIT_STATE_UNUSE) {
             continue;
@@ -87,6 +94,9 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
         // bitmap最后几位可能超过范围，这里判断下
         if (user_page_vaddr >= user_memory_end_vaddr) {
             continue;
+        }
+        if (enable_debug) {
+            printf("%s hasData: %d/%d \n", __FILE__, i ,parent_pcb->vmemory_pool.bmap.len_bit);
         }
         // 激活父进程页表
         page_dir_activate(parent_pcb);
@@ -146,6 +156,72 @@ void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct 
     }
     sys_free_in_kernel(page_buff);
     page_dir_activate(parent_pcb);
+}
+
+void adjust_mem_block_desc_array(struct task_struct *child_pcb, struct task_struct *parent_pcb) {
+    assert(child_pcb && parent_pcb);
+    assert(is_user_thread(parent_pcb));
+    const bool enable_debug = false;
+    interrupt_state old_state = close_interrupt();
+    // 修正 free_list 的 head/tail 指针
+    for(int i = 0; i < BLOCK_DESC_SIZE;i++){
+        if (list_empty(&parent_pcb->u_block_desc[i].free_list)) {
+            list_init(&child_pcb->u_block_desc[i].free_list);
+        } else {
+            struct list *p_child_list = &child_pcb->u_block_desc[i].free_list;
+            page_dir_activate(child_pcb);
+            struct list_node *first_node = p_child_list->head.next;
+            first_node->prev = &p_child_list->head;
+            struct list_node *last_node = p_child_list->tail.prev;
+            last_node->next = &p_child_list->tail; 
+            page_dir_activate(parent_pcb);
+        }
+    }
+
+    // 遍历子进程用户空间，找到所有 block arena，将 p_block_desc 修正为指向子进程的 u_block_desc
+    page_dir_activate(child_pcb);
+    for (int i = 0; i < child_pcb->vmemory_pool.bmap.len_bit; i++) {
+        bit_state state = bitmap_get(&child_pcb->vmemory_pool.bmap, i);
+        if (state == BIT_STATE_UNUSE) {
+            continue;
+        }
+        vaddr_t page_vaddr = child_pcb->vmemory_pool.start + i * PAGE_SIZE;
+        vaddr_t user_memory_end_vaddr = child_pcb->vmemory_pool.start + child_pcb->vmemory_pool.length;
+        if (page_vaddr >= user_memory_end_vaddr) {
+            continue;
+        }
+        // 检查页表是否真实存在
+        page *p_dir_entry = get_page_dir_entry_vaddr(page_vaddr, PAGE_DIR_VADDR);
+        if (p_dir_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        }
+        page *p_table_entry = get_page_table_entry_vaddr(page_vaddr, PAGE_DIR_VADDR);
+        if (p_table_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        }
+        struct arena *p_arena = (struct arena *)page_vaddr;
+        // 双重验证：1.magic 过滤非 arena 页面  2.p_block_desc 必须指向父进程 u_block_desc 范围内
+        if (p_arena->large_flag || p_arena->magic != ARENA_MAGIC) {
+            continue;
+        }
+        vaddr_t desc_start = (vaddr_t)parent_pcb->u_block_desc;
+        vaddr_t desc_end   = desc_start + sizeof(struct mem_block_desc) * BLOCK_DESC_SIZE;
+        if ((vaddr_t)p_arena->p_block_desc < desc_start ||
+            (vaddr_t)p_arena->p_block_desc >= desc_end) {
+            continue;
+        }
+        // 修正 p_block_desc 指向子进程的 u_block_desc
+        size_t block_size = p_arena->p_block_desc->block_size;
+        int desc_index = 0;
+        for (desc_index = 0; desc_index < BLOCK_DESC_SIZE; desc_index++) {
+            if (child_pcb->u_block_desc[desc_index].block_size == block_size) {
+                break;
+            }
+        }
+        p_arena->p_block_desc = &child_pcb->u_block_desc[desc_index];
+    }
+    page_dir_activate(parent_pcb);
+    set_interrupt_state(old_state);
 }
 
 NAKEDFUNC static void intr_exit(void) {
@@ -221,6 +297,7 @@ void copy_process(struct task_struct *child_pcb, struct task_struct *parent_pcb)
 
     copy_parent_pcb_to_child(child_pcb, parent_pcb);
     copy_parent_user_sapce_data_to_child(child_pcb, parent_pcb);
+    adjust_mem_block_desc_array(child_pcb, parent_pcb);
     adjust_copyed_child_pcb_stack(child_pcb);
 }
 

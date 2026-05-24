@@ -21,6 +21,13 @@ void copy_parent_pcb_to_child(struct task_struct *child_pcb, struct task_struct 
 void copy_parent_user_sapce_data_to_child(struct task_struct *child_pcb, struct task_struct *parent_pcb);
 
 /*
+ * @brief 为子进程调整内存块描述符数组，解决内部部分指针为父进程的指针，导致子进程访问父进程的内存的问题, 要在复制完用户空间数据后调用
+ * @param child_pcb: struct task_struct *: 子进程pcb地址，非空
+ * @param parent_pcb: struct task_struct *: 父进程pcb地址，非空, 且为用户线程
+*/
+void adjust_mem_block_desc_array(struct task_struct *child_pcb, struct task_struct *parent_pcb);
+
+/*
  * @brief 调整刚刚的复制的子进程PCB的栈，用于确定返回栈的构件和返回地址的构件
  * 
 */
