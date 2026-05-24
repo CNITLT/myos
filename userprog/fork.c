@@ -178,16 +178,15 @@ void adjust_mem_block_desc_array(struct task_struct *child_pcb, struct task_stru
         }
     }
 
-    // 遍历子进程用户空间，找到所有 block arena，将 p_block_desc 修正为指向子进程的 u_block_desc
+#if !USE_BLOCK_DESC_INDEX
+    // 指针版：修正子进程用户空间所有 block arena 的 p_block_desc 指针
     page_dir_activate(child_pcb);
     for (int i = 0; i < child_pcb->vmemory_pool.bmap.len_bit; i++) {
-        bit_state state = bitmap_get(&child_pcb->vmemory_pool.bmap, i);
-        if (state == BIT_STATE_UNUSE) {
+        if (bitmap_get(&child_pcb->vmemory_pool.bmap, i) == BIT_STATE_UNUSE) {
             continue;
         }
         vaddr_t page_vaddr = child_pcb->vmemory_pool.start + i * PAGE_SIZE;
-        vaddr_t user_memory_end_vaddr = child_pcb->vmemory_pool.start + child_pcb->vmemory_pool.length;
-        if (page_vaddr >= user_memory_end_vaddr) {
+        if (page_vaddr >= child_pcb->vmemory_pool.start + child_pcb->vmemory_pool.length) {
             continue;
         }
         // 检查页表是否真实存在
@@ -221,6 +220,8 @@ void adjust_mem_block_desc_array(struct task_struct *child_pcb, struct task_stru
         p_arena->p_block_desc = &child_pcb->u_block_desc[desc_index];
     }
     page_dir_activate(parent_pcb);
+#endif
+
     set_interrupt_state(old_state);
 }
 

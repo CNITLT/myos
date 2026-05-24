@@ -264,6 +264,7 @@ void user_vmemory_pool_init(memory_pool* p_user_vmemory_pool){
 void mem_block_desc_array_init(struct mem_block_desc* desc_array){
     size_t block_size = BLOCK_MIN_SIZE;
     for(int i = 0; i < BLOCK_DESC_SIZE;i++){
+        desc_array[i].index = i;
         desc_array[i].block_size = block_size;
         desc_array[i].blocks_per_arena = (PAGE_SIZE - sizeof(struct arena))/block_size;
         list_init(&desc_array[i].free_list);
@@ -275,7 +276,20 @@ struct mem_block* arena2block(struct arena* p_arena, size_t index){
     if(p_arena->large_flag){
         return (struct mem_block*)((uintaddr_t)p_arena + sizeof(struct arena));
     }
-    return (struct mem_block*)((uintaddr_t)p_arena + sizeof(struct arena) + p_arena->p_block_desc->block_size*index);
+#if USE_BLOCK_DESC_INDEX
+    struct task_struct *pcb = get_current_pcb();
+    struct mem_block_desc *desc_arr;
+    if(is_kernel_thread(pcb)){
+        desc_arr = g_kernel_block_desc;
+    }
+    else{
+        desc_arr = pcb->u_block_desc;
+    }
+    struct mem_block_desc *p_block_desc = &desc_arr[p_arena->block_desc_index];
+#else
+    struct mem_block_desc *p_block_desc = p_arena->p_block_desc;
+#endif
+    return (struct mem_block*)((uintaddr_t)p_arena + sizeof(struct arena) + p_block_desc->block_size*index);
 }
 
 
@@ -290,9 +304,14 @@ struct arena* malloc_and_init_page_arena(size_t page_count){
         return NULL;
     }
     ret->large_flag = true;
+#if USE_BLOCK_DESC_INDEX
+    ret->block_desc_index = -1;
+#else
     ret->p_block_desc = NULL;
+#endif
     ret->count.page_count = page_count;
     ret->magic = ARENA_MAGIC;
+    
     return ret;
 }
 
@@ -304,7 +323,11 @@ struct arena* malloc_and_init_block_arena(struct mem_block_desc* p_block_desc){
         return NULL;
     }
     ret->large_flag = false;
+#if USE_BLOCK_DESC_INDEX
+    ret->block_desc_index = p_block_desc->index;
+#else
     ret->p_block_desc = p_block_desc;
+#endif
     ret->count.free_count = p_block_desc->blocks_per_arena;
     ret->magic = ARENA_MAGIC;
     for(int i = 0; i < p_block_desc->blocks_per_arena; i++){
@@ -370,14 +393,21 @@ void sys_free(void* p){
     else{
         struct task_struct *pcb = get_current_pcb();
         memory_pool * p_vmemory_pool = NULL;
+        struct mem_block_desc *desc_arr = NULL;
         if(is_kernel_thread(pcb)){
             p_vmemory_pool = &kernel_vmemory_pool;
+            desc_arr = g_kernel_block_desc;
         }
         else{
             p_vmemory_pool = &pcb->vmemory_pool;
+            desc_arr = pcb->u_block_desc;
         }
         lock(&p_vmemory_pool->lock);
-        struct mem_block_desc* p_block_desc = p_arena->p_block_desc;
+#if USE_BLOCK_DESC_INDEX
+        struct mem_block_desc *p_block_desc = &desc_arr[p_arena->block_desc_index];
+#else
+        struct mem_block_desc *p_block_desc = p_arena->p_block_desc;
+#endif
         list_push_front(&p_block_desc->free_list, p);
         p_arena->count.free_count++;
         if(p_arena->count.free_count == p_block_desc->blocks_per_arena){

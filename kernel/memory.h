@@ -13,12 +13,19 @@
 #define BLOCK_MIN_SIZE 16
 #define BLOCK_MAX_SIZE (BLOCK_MIN_SIZE << (BLOCK_DESC_SIZE - 1))
 #define ARENA_MAGIC 0xA7E5A7E5
+
+// 切换 block_desc 的标识方式:
+// 1 - 索引版(arena.block_desc_index)，fork时无需特殊处理
+// 0 - 指针版(arena.p_block_desc)，fork时需要遍历修正指针
+#define USE_BLOCK_DESC_INDEX 1
+
 struct mem_block {
     struct list_node free_node;
 };
 
 struct mem_block_desc{
     //这个结构是被arena共享的
+    int32_t index; // 在pcb里数组所在的索引
     size_t block_size; //块大小
     size_t blocks_per_arena; //这里的arena基本上就代表一个页的概念，等价于是一个页去掉一些存元信息的空间，内部的blocks有多少块
     struct list free_list;
@@ -26,7 +33,11 @@ struct mem_block_desc{
 
 struct arena{
     // 如果是小于等于1024的内存大小这个才有用, 超过1024的被认为是大空间，按所需页直接分配，不采用小block的分配方法
+#if USE_BLOCK_DESC_INDEX
+    int32_t block_desc_index;  // -1表示是大空间
+#else
     struct mem_block_desc* p_block_desc;
+#endif
     union  {
         size_t free_count;//large_flag为False，则这个有用 表明空闲块的数目 则这个arena只是管理一页大小的空间
         size_t page_count;//large_flag为True, 则这个有用 表明这个arena管理的是多页分配，这里表明分配了多少页
