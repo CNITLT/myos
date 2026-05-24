@@ -292,6 +292,7 @@ struct arena* malloc_and_init_page_arena(size_t page_count){
     ret->large_flag = true;
     ret->p_block_desc = NULL;
     ret->count.page_count = page_count;
+    ret->magic = ARENA_MAGIC;
     return ret;
 }
 
@@ -305,6 +306,7 @@ struct arena* malloc_and_init_block_arena(struct mem_block_desc* p_block_desc){
     ret->large_flag = false;
     ret->p_block_desc = p_block_desc;
     ret->count.free_count = p_block_desc->blocks_per_arena;
+    ret->magic = ARENA_MAGIC;
     for(int i = 0; i < p_block_desc->blocks_per_arena; i++){
         struct mem_block* p_block = arena2block(ret, i);
         list_push_back(&p_block_desc->free_list, &p_block->free_node);
@@ -356,6 +358,7 @@ void *sys_malloc(size_t size){
 
 
 void sys_free(void* p){
+    const bool enable_debug = false;
     if(!p) {
         return;
     }
@@ -381,6 +384,9 @@ void sys_free(void* p){
             //空闲的arena释放掉
             for(int i = 0; i < p_block_desc->blocks_per_arena; i++){
                 struct mem_block* p_block = arena2block(p_arena, i);
+                if (enable_debug) {
+                    printf("%s will call list_remove\n", __FILE__);
+                }
                 list_remove(&p_block->free_node);
             }
             free_page(p_arena, 1);

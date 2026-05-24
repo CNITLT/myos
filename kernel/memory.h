@@ -12,6 +12,7 @@
 #define BLOCK_DESC_SIZE 7
 #define BLOCK_MIN_SIZE 16
 #define BLOCK_MAX_SIZE (BLOCK_MIN_SIZE << (BLOCK_DESC_SIZE - 1))
+#define ARENA_MAGIC 0xA7E5A7E5
 struct mem_block {
     struct list_node free_node;
 };
@@ -31,6 +32,7 @@ struct arena{
         size_t page_count;//large_flag为True, 则这个有用 表明这个arena管理的是多页分配，这里表明分配了多少页
     } count;
     bool large_flag;//采用懒加载的方式，所以不能按p_desc是不是null来判断，可能是还有请求到达，没进行初始化
+    uint32_t magic; // 用于标识这是一个arena，防止fork时误判非arena页面
 };
 
 
