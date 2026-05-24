@@ -105,3 +105,7 @@ int32_t execv(const char* path, char* const argv[]) {
 void ps() {
     syscall(SYS_PS);
 }
+
+void thread_yield() {
+    syscall(SYS_THREAD_YIELD);
+}

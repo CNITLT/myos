@@ -40,6 +40,7 @@ void syscall_init(){
     syscall_table[SYS_PS] = sys_ps;
     syscall_table[SYS_EXECV] = sys_execv;
     syscall_table[SYS_MKDIR] = sys_mkdir;
+    syscall_table[SYS_THREAD_YIELD] = sys_thread_yield;
 }
 
 pid_t sys_getpid(void){

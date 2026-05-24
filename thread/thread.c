@@ -235,7 +235,7 @@ void thread_unblock(struct task_struct* pcb){
     set_interrupt_state(old_state);
 }
 
-void thread_yield(){
+void sys_thread_yield(){
     struct task_struct* pcb = get_current_pcb();
     interrupt_state old_state = close_interrupt();
     assert(pcb->status == TASK_RUNNING);

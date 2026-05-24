@@ -47,7 +47,7 @@ void sleep_ticks(size_t sleep_time_tick){
     size_t start_tick = g_tick;
     while((g_tick - start_tick) < sleep_time_tick){
         //debug("start_tick:%d sleep_time_tick:%d g_tick:%d intr_status:%d\n", start_tick, sleep_time_tick,g_tick,get_interrupt_state());
-        thread_yield();
+        sys_thread_yield();
     }
 }
 

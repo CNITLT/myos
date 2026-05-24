@@ -188,9 +188,9 @@ void thread_block(task_status status);
 void thread_unblock(struct task_struct* pcb);
 
 /*
-@brief 当前线程主动放弃CPU
+@brief 当前线程主动放弃CPU (系统调用实现)
 */
-void thread_yield();
+void sys_thread_yield();
 
 
 /*

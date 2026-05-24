@@ -16,8 +16,8 @@
 #define MAX_ARG_COUNT 16
 // 当前所在的目录名字的最大长度
 #define MAX_CWD_LENGTH 64
-// 是否初始化用户命令prog
-#define INIT_USER_COMMAND 1
+// 是否初始化用户命令prog, 初始化一次就够了，不然启动有点慢
+#define INIT_USER_COMMAND 0
 // 存储输入的命令
 static char g_cmd_line[MAX_CMD_LENGTH] = {0};
 static char *g_argv[MAX_ARG_COUNT] = {0};
@@ -214,8 +214,9 @@ static void execute_cmd(void)
             {
                 // 父进程
                 // TODO:先卡死，之后再改为wait
-                while (1)
-                    ;
+                while (1) {
+                    thread_yield();
+                }
             }
             else
             {

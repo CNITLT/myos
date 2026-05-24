@@ -27,7 +27,8 @@ enum SYSCALL_NR {
     SYS_FORK,
     SYS_PS,
     SYS_EXECV,
-    SYS_MKDIR
+    SYS_MKDIR,
+    SYS_THREAD_YIELD
  };
 /*
 @brief 用户态的系统调用入口
@@ -194,4 +195,9 @@ int32_t execv(const char* path, char* const argv[]);
  * @brief 打印所有进程信息
  */
 void ps();
+
+/*
+ * @brief 主动让出CPU
+ */
+void thread_yield();
 #endif
