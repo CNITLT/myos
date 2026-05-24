@@ -16,7 +16,8 @@
 #define MAX_ARG_COUNT 16
 // 当前所在的目录名字的最大长度
 #define MAX_CWD_LENGTH 64
-
+// 是否初始化用户命令prog
+#define INIT_USER_COMMAND 1
 // 存储输入的命令
 static char g_cmd_line[MAX_CMD_LENGTH] = {0};
 static char *g_argv[MAX_ARG_COUNT] = {0};
@@ -259,7 +260,9 @@ void my_shell()
 
 void init_user_command()
 {
+#if !INIT_USER_COMMAND
     return;
+#endif
     const bool enable_debug = false;
     Byte *buff = sys_malloc(BLOCK_SIZE);
     sys_unlink("/prog");
