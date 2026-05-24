@@ -124,8 +124,8 @@ void buildin_ls(int argc, char *argv[]) {
         while(p_dir_entry = readdir(p_dir)) {
             memset(buff,' ' ,17);
             memcpy(buff, p_dir_entry->fileName, strlen(p_dir_entry->fileName));
-            printf("%s", buff);
             buff[16] = 0;
+            printf("%s", buff);
         }
         free(buff);
         printf("\n");
