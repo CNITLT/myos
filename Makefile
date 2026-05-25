@@ -3,7 +3,7 @@ AS = nasm
 ASFLAGS = -I./boot/include -I./boot
 CC = gcc
 # -fno-omit-frame-pointer 强制生成push ebp, mov ebp esp两条指令
-CFLAGS = -I./device -I./kernel -I./lib -I./lib/kernel -I./lib/user -I./thread -I./userprog -I./fileSystem -I./shell -nostdinc -nostdlib -m32 -c -fno-builtin -fno-omit-frame-pointer
+CFLAGS = -I./device -I./kernel -I./lib -I./lib/kernel -I./lib/user -I./thread -I./userprog -I./fileSystem -I./shell -nostdinc -nostdlib -m32 -c -fno-builtin -fno-omit-frame-pointer -ffunction-sections -fdata-sections
 LD = ld
 ENTRY_POINT = 0xC0002000
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main 
