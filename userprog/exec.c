@@ -32,8 +32,9 @@ int sys_execv(const char* path, char* const argv[]) {
     }
     // 加载成功，切换到新的进程
     struct task_struct* pcb = get_current_pcb();
-    char *name = strrchr(abs_path, '/');
-    
+    char *name = strrchr(abs_path, '/') + 1;
+
+    memset(pcb->name, 0, TASK_NAME_LENGTH);
     memcpy(pcb->name, name, strlen(name));
     pcb->name[TASK_NAME_LENGTH - 1] = 0;
     // TODO:构建中断栈, 这里的逻辑应该要改下, 之前就魔改过，再对着书上来可能有问题
@@ -46,15 +47,41 @@ int sys_execv(const char* path, char* const argv[]) {
         printf("%s will free abs_path:0x%x\n", __FILE__, abs_path);
     }
     free(abs_path);
+
+    // 分配用户栈（在 new_pcb 的页表上下文中）
+    page_dir_activate(new_pcb);
+    if (malloc_page_core(USER_STACK3_VADDR, 1, &new_pcb->vmemory_pool,
+            PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER) != USER_STACK3_VADDR) {
+        printf("%s alloc user stack failed!\n", __FILE__);
+        page_dir_activate(pcb);
+        free_kernel_page(new_pcb, 1);
+        return -1;
+    }
+    // 切回当前 PCB 的页表
+    page_dir_activate(pcb);
+
+    // 释放旧进程的用户内存块
+    // TODO: 应该遍历旧进程的用户空间，逐个释放所有用户页，再重新初始化 u_block_desc
+    mem_block_desc_array_init(&pcb->u_block_desc);
+    // 复制新程序的内存池状态
+    memcpy(&pcb->vmemory_pool, &new_pcb->vmemory_pool, sizeof(pcb->vmemory_pool));
+    // 释放旧进程的页目录
+    free_kernel_page(pcb->page_dir, 1);
+    // 切换为新程序的页目录
+    pcb->page_dir = new_pcb->page_dir;
+    // 关闭旧进程打开的文件描述符（0/1/2 保留）
+    for (int i = 3; i < MAX_FILES_OPEN_PER_PROC; i++) {
+        if (pcb->fd_table[i] != -1) {
+            sys_close(pcb->fd_table[i]);
+            pcb->fd_table[i] = -1;
+        }
+    }
     if (enable_debug) {
         printf("%s will free_kernel_page new_pcb:0x%x\n", __FILE__, new_pcb);
     }
     free_kernel_page(new_pcb, 1);
-    // block_desc重置
-    mem_block_desc_array_init(&pcb->u_block_desc);
-    // 页表切换
-    page_dir_activate(new_pcb);
     // 直接从中断返回
+    page_dir_activate(pcb);
     intr_exit_from(p_intr_stack);
     return 0;
 }
