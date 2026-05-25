@@ -221,16 +221,16 @@ static void execute_cmd(void)
             else
             {
                 // 子进程
-                // execv(cmd_path, g_argv);
-                printf("this is child process\n");
-                void *p = malloc(2048);
-                printf("child malloc2048 :%x\n", p);
-                free(p);
-                for (int i = 1; i < PAGE_SIZE * 4; i *= 2) {
-                    p = malloc(i);
-                    printf("child malloc%d :%x\n",i, p);
-                    free(p);
-                }
+                execv(cmd_path, g_argv);
+                // printf("this is child process\n");
+                // void *p = malloc(2048);
+                // printf("child malloc2048 :%x\n", p);
+                // free(p);
+                // for (int i = 1; i < PAGE_SIZE * 4; i *= 2) {
+                //     p = malloc(i);
+                //     printf("child malloc%d :%x\n",i, p);
+                //     free(p);
+                // }
             }
         }
     }

@@ -170,7 +170,8 @@ vaddr_t malloc_page_core(vaddr_t start_vaddr, size_t page_count, memory_pool* p_
              PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);//系统的页表是固定的，这里能运行到的话只能是用户的，这里可以固定这些属性
             table_paddr_index++;
         }
-        set_page_table_entry(t_vaddr, t_paddr, page_dir, page_attr);
+        error_code_t error_code = set_page_table_entry(t_vaddr, t_paddr, page_dir, page_attr);
+        assert(error_code == NOERROR);
     }
     unlock(&p_vmemory_pool->lock);
     // 回收没用到的页表内存
