@@ -166,7 +166,7 @@ void buildin_ls(int argc, char *argv[]) {
             stat(abs_path, &entry_stat);
             free(abs_path);
          
-            sprintf(buff, "%dKB", entry_stat.st_size);
+            sprintf(buff, "%dB", entry_stat.st_size);
             printf("%s", buff);
 
             memset(buff,0 , 17);
