@@ -268,7 +268,7 @@ void init_user_command()
     {
         fd = sys_open("/prog", O_RDWR);
     }
-    for (int i = 500; i < 500 + 10; i++)
+    for (int i = 500; i < 500 + 16; i++)
     {
         if (enable_debug)
         {
