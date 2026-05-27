@@ -8,11 +8,20 @@
 #include "shell.h"
 #include "build_cmd.h"
 #include "string.h"
+
+// TODO: 之后改掉，现在先占位
+int exit(int ret) {
+    while(1);
+}
+
 int sys_execv(const char* path, char* const argv[]) {
     const bool enable_debug = true;
     int32_t argc = 0;
     while(argv[argc]) {
-        argc++;
+        if (enable_debug) {
+            printf("%s argv[%d]:%s\n", __FILE__, argc, argv[argc]);
+        }
+        argc++; 
     }
     uint32_t entry_point = 0;
     if (enable_debug) {
@@ -57,6 +66,33 @@ int sys_execv(const char* path, char* const argv[]) {
         free_kernel_page(new_pcb, 1);
         return -1;
     }
+    // 额外分配一页存argv
+    char *user_argv = malloc_page_core(USER_VADDR_START, 1, &new_pcb->vmemory_pool,
+            PAGE_DIR_VADDR, PAGE_P_ATTR_EXIST | PAGE_RW_ATTR_RW | PAGE_US_ATTR_USER);
+    if (user_argv == NULL) {
+        printf("%s alloc user argv failed!\n", __FILE__);
+        page_dir_activate(pcb);
+        free_kernel_page(new_pcb, 1);
+        return -1;
+    }
+    memset(user_argv, 0, PAGE_SIZE);
+
+    // 然后复制一下数据并修改用户栈,填入对应的参数
+    // [argv]  [16缓冲区]  [argv[0]] [16缓冲区] [argv[1]]
+    char *user_argv_next = user_argv + argc * sizeof(vaddr_t) + 16;
+    for (int i = 0; i < argc; i++) {
+        strcpy(user_argv_next, argv[i]);
+        ((vaddr_t *)user_argv)[i] = (vaddr_t)user_argv_next;
+        user_argv_next += strlen(argv[i]) + 16;
+    }
+    // 模拟push过程写数据（iretd没有call，需补fake ret addr）
+    p_intr_stack->esp = (void *)((size_t)p_intr_stack->esp - sizeof(vaddr_t));
+    *(vaddr_t *)p_intr_stack->esp = (vaddr_t)user_argv;   // argv
+    p_intr_stack->esp = (void *)((size_t)p_intr_stack->esp - sizeof(vaddr_t));
+    *(int32_t *)p_intr_stack->esp = argc;                  // argc
+    p_intr_stack->esp = (void *)((size_t)p_intr_stack->esp - sizeof(vaddr_t));
+    *(vaddr_t *)p_intr_stack->esp = 0;                     // fake return address
+   
     // 切回当前 PCB 的页表
     page_dir_activate(pcb);
 
