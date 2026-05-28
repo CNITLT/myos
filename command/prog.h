@@ -1,6 +1,6 @@
 #ifndef PROG_H
 #define PROG_H
 
-int prog(int argc, char *argv[]);
+int main(int argc, char *argv[]);
 
 #endif
