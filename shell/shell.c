@@ -212,7 +212,9 @@ static void execute_cmd(void)
             if (pid)
             {
                 // 父进程等待子进程退出
-                wait(NULL);
+                int ret = -1;
+                pid_t child_pid = wait(&ret);
+                printf("shell wait %d ret:%d\n", child_pid, ret);
             }
             else
             {
