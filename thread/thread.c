@@ -424,3 +424,37 @@ void sys_ps() {
     list_traversal(&thread_all_list, sys_ps_traversal_func, 0);
     set_interrupt_state(old_state);
 }
+
+pid_t sys_wait(int32_t *p_exit_status) {
+    interrupt_state old_state = close_interrupt();
+
+    struct task_struct* pcb = get_current_pcb();
+    pid_t ret_child_pid = -1;
+    bool has_child = false;
+    do {
+        // 先查找是否有子进程
+        struct list_node* iter = thread_all_list.head.next;
+        while(iter != &(thread_all_list.tail)){
+            struct task_struct* iter_pcb = elem2entry(struct task_struct, all_list_tag, iter); 
+            if (iter_pcb->parent_pid == pcb->pid) {
+                has_child = true;
+                if (iter_pcb->status == TASK_DIED) {
+                    ret_child_pid = iter_pcb->pid;
+                    if (p_exit_status) {
+                        *p_exit_status = iter_pcb->exit_status;
+                    }
+                    break;
+                }
+            }
+            iter = iter->next;
+        }
+        if (ret_child_pid != -1 || !has_child) {
+            break;
+        }
+        set_interrupt_state(old_state);
+        sys_thread_yield();
+        old_state = close_interrupt();
+    } while(has_child && ret_child_pid == -1);
+    set_interrupt_state(old_state);
+    return ret_child_pid;
+}

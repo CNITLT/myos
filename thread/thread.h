@@ -12,7 +12,7 @@
 typedef void thread_func(void*);
 //该类型的指针
 typedef thread_func* p_thread_func;
-typedef uint32_t pid_t;
+typedef int32_t pid_t;
 typedef enum task_status{
     TASK_RUNNING, //运行状态
     TASK_READY, //就绪状态
@@ -104,6 +104,7 @@ struct task_struct {
    memory_pool vmemory_pool; // 用于标记虚拟地址空间池, 只用于用户进程，内核用的是全局变量记录的
    uint32_t current_workdir_inode_no; // 当前工作目录的inode编号
    uint32_t parent_pid; // 为-1表示无父进程
+   int32_t exit_status; // 退出状态
    uint32_t stack_magic;	 // 用这串数字做栈的边界标记,用于检测栈的溢出
 
 
@@ -236,4 +237,12 @@ void init_idle_thread();
  * @brief 打印所有进程信息
 */
 void sys_ps();
+/*
+ * @brief 等待子进程终止
+ * @param p_exit_status: int32_t* : 子进程退出状态指针
+ * @return pid_t: 等待的子进程PID
+ * @note 如果没有子进程，则直接返回-1
+*/
+pid_t sys_wait(int32_t *p_exit_status);
+
 #endif

@@ -211,11 +211,8 @@ static void execute_cmd(void)
 
             if (pid)
             {
-                // 父进程
-                // TODO:先卡死，之后再改为wait
-                while (1) {
-                    thread_yield();
-                }
+                // 父进程等待子进程退出
+                wait(NULL);
             }
             else
             {

@@ -28,7 +28,8 @@ enum SYSCALL_NR {
     SYS_PS,
     SYS_EXECV,
     SYS_MKDIR,
-    SYS_THREAD_YIELD
+    SYS_THREAD_YIELD,
+    SYS_WAIT
  };
 /*
 @brief 用户态的系统调用入口
@@ -200,4 +201,11 @@ void ps();
  * @brief 主动让出CPU
  */
 void thread_yield();
+
+/*
+ * @brief 等待子进程退出，返回子进程的PID
+ * @param exit_status: int32_t *: 存放子进程退出状态的指针，可为NULL
+ * @return pid_t 成功返回子进程PID，失败返回-1
+*/
+pid_t wait(int32_t *exit_status);
 #endif

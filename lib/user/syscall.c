@@ -109,3 +109,7 @@ void ps() {
 void thread_yield() {
     syscall(SYS_THREAD_YIELD);
 }
+
+pid_t wait(int32_t *exit_status) {
+    return syscall(SYS_WAIT, exit_status);
+}
