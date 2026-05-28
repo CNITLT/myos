@@ -466,6 +466,9 @@ pid_t sys_wait(int32_t *p_exit_status) {
 
 // 回收PCB的空间资源
 static void release_pcb_prog_resource(struct task_struct *pcb) {
+    if (!is_user_thread(pcb)) {
+        return;
+    }
     const bool enable_debug = true;
 
     if (enable_debug) {
@@ -521,17 +524,19 @@ static void release_pcb_prog_resource(struct task_struct *pcb) {
     pcb->page_dir = NULL;
     // 切换为内核页表
     page_dir_activate(pcb);
-    // 回收用户空间的页表内存
+    // 回收用户空间的页表内
     free_kernel_page(page_dir, 1);
 
     // 然后回收虚拟内存池的位图空间
     if (enable_debug) {
         printf("%s will free vmemory_pool\n", __FILE__);
     }
+
      size_t page_count = (USER_PROCESS_MEMORY_MAX_LENGTH + PAGE_SIZE - 1)/ PAGE_SIZE;
     size_t bitmap_size_byte = (page_count + 8 - 1) / 8;
     size_t bitmap_size_page = (bitmap_size_byte + PAGE_SIZE - 1) / PAGE_SIZE;
     free_kernel_page(pcb->vmemory_pool.bmap.bits, bitmap_size_page);
+    
 }
 
 void sys_exit(int32_t exit_status) {
