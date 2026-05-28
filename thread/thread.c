@@ -466,23 +466,58 @@ pid_t sys_wait(int32_t *p_exit_status) {
 
 // 回收PCB的空间资源
 static void release_pcb_prog_resource(struct task_struct *pcb) {
-    // 遍历页表回收空间资源
-    for (uint32_t user_page_start_vaddr = 0; user_page_start_vaddr < 0xC0000000; user_page_start_vaddr += PAGE_SIZE * 1024) {
-        page* p_page_dir_entry = get_page_dir_entry_vaddr(user_page_start_vaddr, PAGE_DIR_VADDR);
+    const bool enable_debug = true;
+
+    if (enable_debug) {
+        printf("%s will free user prog page\n", __FILE__);
+    }
+    vaddr_t user_memory_end_vaddr = pcb->vmemory_pool.start + pcb->vmemory_pool.length;
+    for (int i = 0;i < pcb->vmemory_pool.bmap.len_bit; i++) {
+        bit_state state = bitmap_get(&pcb->vmemory_pool.bmap, i);
+        if (state == BIT_STATE_UNUSE) {
+            continue;
+        }
+        vaddr_t user_page_vaddr = pcb->vmemory_pool.start + i * PAGE_SIZE;
+        // bitmap最后几位可能超过范围，这里判断下
+        if (user_page_vaddr >= user_memory_end_vaddr) {
+            continue;
+        }
+        if (enable_debug) {
+            printf("%s hasData: %d/%d \n", __FILE__, i ,pcb->vmemory_pool.bmap.len_bit);
+        }
+
+        page* p_page_dir_entry = get_page_dir_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
         if (p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST) {
             continue;
         }
 
-        for (uint32_t user_page_vaddr = user_page_start_vaddr;user_page_vaddr < user_page_start_vaddr +  PAGE_SIZE * 1024; user_page_vaddr += PAGE_SIZE) {
-            page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
-            if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
-                continue;
-            } 
-            pfree_page(p_page_table_entry->PADDR * PAGE_SIZE, 1);
+        if (enable_debug) {
+            printf("%s p_page_dir_entry:0x%x entry->PADDR:0x%x \n", __FILE__,  p_page_dir_entry, p_page_dir_entry->PADDR * PAGE_SIZE);
         }
-        pfree_page(p_page_dir_entry->PADDR * PAGE_SIZE, 1);
+
+        page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
+        if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        } 
+        // 先把单独的用户页释放掉
+        pfree_page(p_page_table_entry->PADDR * PAGE_SIZE, 1);
     }
-    vaddr_t page_dir = pcb->page_dir;
+
+    // 然后开始释放一级页表
+    if (enable_debug) {
+        printf("%s will free page_table\n", __FILE__);
+    }
+
+    for (page *p_page_dir_entry = (page *)PAGE_DIR_VADDR; p_page_dir_entry < (page *)PAGE_DIR_VADDR + 1023;  p_page_dir_entry++) {
+        if (p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        }
+          if (enable_debug) {
+            printf("%s p_page_dir_entry:0x%x entry->PADDR:0x%x \n", __FILE__,  p_page_dir_entry, p_page_dir_entry->PADDR * PAGE_SIZE);
+        }
+         pfree_page(p_page_dir_entry->PADDR * PAGE_SIZE, 1);
+    }
+    vaddr_t *page_dir = pcb->page_dir;
     pcb->page_dir = NULL;
     // 切换为内核页表
     page_dir_activate(pcb);
@@ -490,8 +525,13 @@ static void release_pcb_prog_resource(struct task_struct *pcb) {
     free_kernel_page(page_dir, 1);
 
     // 然后回收虚拟内存池的位图空间
-    size_t pool_page_count = (USER_PROCESS_MEMORY_MAX_LENGTH + PAGE_SIZE - 1)/ PAGE_SIZE;
-    free_kernel_page(pcb->vmemory_pool.bmap.bits, pool_page_count);
+    if (enable_debug) {
+        printf("%s will free vmemory_pool\n", __FILE__);
+    }
+     size_t page_count = (USER_PROCESS_MEMORY_MAX_LENGTH + PAGE_SIZE - 1)/ PAGE_SIZE;
+    size_t bitmap_size_byte = (page_count + 8 - 1) / 8;
+    size_t bitmap_size_page = (bitmap_size_byte + PAGE_SIZE - 1) / PAGE_SIZE;
+    free_kernel_page(pcb->vmemory_pool.bmap.bits, bitmap_size_page);
 }
 
 void sys_exit(int32_t exit_status) {
