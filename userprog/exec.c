@@ -9,9 +9,10 @@
 #include "build_cmd.h"
 #include "string.h"
 
-// TODO: 之后改掉，现在先占位
+// 用户程序退出
 int exit(int ret) {
-    while(1);
+    syscall(SYS_EXIT, ret);
+    return 0;
 }
 
 int sys_execv(const char* path, char* const argv[]) {

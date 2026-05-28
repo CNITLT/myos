@@ -42,6 +42,7 @@ void syscall_init(){
     syscall_table[SYS_MKDIR] = sys_mkdir;
     syscall_table[SYS_THREAD_YIELD] = sys_thread_yield;
     syscall_table[SYS_WAIT] = sys_wait;
+    syscall_table[SYS_EXIT] = sys_exit;
 }
 
 pid_t sys_getpid(void){

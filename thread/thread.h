@@ -245,4 +245,10 @@ void sys_ps();
 */
 pid_t sys_wait(int32_t *p_exit_status);
 
+/*
+ * @brief 退出当前进程
+ * @param exit_status: int32_t : 退出状态码，会传递给父进程的wait函数
+ * @note 退出后进程不会返回，资源由父进程回收
+*/
+void sys_exit(int32_t exit_status);
 #endif

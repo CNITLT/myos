@@ -29,7 +29,8 @@ enum SYSCALL_NR {
     SYS_EXECV,
     SYS_MKDIR,
     SYS_THREAD_YIELD,
-    SYS_WAIT
+    SYS_WAIT,
+    SYS_EXIT
  };
 /*
 @brief 用户态的系统调用入口
@@ -208,4 +209,10 @@ void thread_yield();
  * @return pid_t 成功返回子进程PID，失败返回-1
 */
 pid_t wait(int32_t *exit_status);
+
+/*
+ * @brief 退出当前进程
+ * @param exit_status: int32_t : 退出状态码
+*/
+void exit(int32_t exit_status);
 #endif

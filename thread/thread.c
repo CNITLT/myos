@@ -443,6 +443,10 @@ pid_t sys_wait(int32_t *p_exit_status) {
                     if (p_exit_status) {
                         *p_exit_status = iter_pcb->exit_status;
                     }
+                    // 从列表里移除pcb
+                    list_remove(&iter_pcb->all_list_tag);
+                    // 回收pcb
+                    free_kernel_page(iter_pcb, 1);
                     break;
                 }
             }
@@ -457,4 +461,57 @@ pid_t sys_wait(int32_t *p_exit_status) {
     } while(has_child && ret_child_pid == -1);
     set_interrupt_state(old_state);
     return ret_child_pid;
+}
+
+// 回收PCB的空间资源
+static void release_pcb_prog_resource(struct task_struct *pcb) {
+    // 遍历页表回收空间资源
+    for (uint32_t user_page_start_vaddr = 0; user_page_start_vaddr < 0xC0000000; user_page_start_vaddr += PAGE_SIZE * 1024) {
+        page* p_page_dir_entry = get_page_dir_entry_vaddr(user_page_start_vaddr, PAGE_DIR_VADDR);
+        if (p_page_dir_entry->P == PAGE_P_VALUE_UNEXIST) {
+            continue;
+        }
+
+        for (uint32_t user_page_vaddr = user_page_start_vaddr;user_page_vaddr < user_page_start_vaddr +  PAGE_SIZE * 1024; user_page_vaddr += PAGE_SIZE) {
+            page *p_page_table_entry = get_page_table_entry_vaddr(user_page_vaddr, PAGE_DIR_VADDR);
+            if (p_page_table_entry->P == PAGE_P_VALUE_UNEXIST) {
+                continue;
+            } 
+            pfree_page(p_page_table_entry->PADDR * PAGE_SIZE, 1);
+        }
+        pfree_page(p_page_dir_entry->PADDR * PAGE_SIZE, 1);
+    }
+    vaddr_t page_dir = pcb->page_dir;
+    pcb->page_dir = NULL;
+    // 切换为内核页表
+    page_dir_activate(pcb);
+    // 回收用户空间的页表内存
+    free_kernel_page(page_dir, 1);
+
+    // 然后回收虚拟内存池的位图空间
+    size_t pool_page_count = (USER_PROCESS_MEMORY_MAX_LENGTH + PAGE_SIZE - 1)/ PAGE_SIZE;
+    free_kernel_page(pcb->vmemory_pool.bmap.bits, pool_page_count);
+}
+
+void sys_exit(int32_t exit_status) {
+    interrupt_state old_state = close_interrupt();
+    struct task_struct *pcb = get_current_pcb();
+    // 先从运行链表里移除
+    list_remove(&thread_ready_list, &pcb->general_tag);
+    // 设置退出状态
+    pcb->status = TASK_DIED;
+    pcb->exit_status = exit_status;
+    // 然后遍历一下找出子进程，让init收养
+    struct list_node* iter = thread_all_list.head.next;
+    while(iter != &(thread_all_list.tail)){
+        struct task_struct* iter_pcb = elem2entry(struct task_struct, all_list_tag, iter); 
+        if (iter_pcb->parent_pid == pcb->pid) {
+            iter_pcb->parent_pid = idle_thread_pcb->pid;
+        }
+        iter = iter->next;
+    }
+    // 回收其他空间
+    release_pcb_prog_resource(pcb);
+    set_interrupt_state(old_state);
+    schedule();
 }
