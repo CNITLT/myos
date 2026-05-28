@@ -287,6 +287,7 @@ void idle_thread_func(void *args){
     while(1){
         thread_block(TASK_BLOCKED);
         open_interrupt();
+        sys_wait(NULL);
         //hlt使CPU停转，等待中断响应 
         asm volatile("hlt;":::"memory");
     }
