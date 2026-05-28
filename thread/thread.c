@@ -498,7 +498,7 @@ void sys_exit(int32_t exit_status) {
     interrupt_state old_state = close_interrupt();
     struct task_struct *pcb = get_current_pcb();
     // 先从运行链表里移除
-    list_remove(&thread_ready_list, &pcb->general_tag);
+    list_remove(&pcb->general_tag);
     // 设置退出状态
     pcb->status = TASK_DIED;
     pcb->exit_status = exit_status;

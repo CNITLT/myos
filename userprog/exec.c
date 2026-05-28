@@ -1,4 +1,5 @@
 #include "exec.h"
+#include "syscall.h"
 #include "file.h"
 #include "fs.h"
 #include "page.h"
@@ -8,11 +9,11 @@
 #include "shell.h"
 #include "build_cmd.h"
 #include "string.h"
+#include "thread.h"
 
 // 用户程序退出
-int exit(int ret) {
+void exit(int ret) {
     syscall(SYS_EXIT, ret);
-    return 0;
 }
 
 int sys_execv(const char* path, char* const argv[]) {
